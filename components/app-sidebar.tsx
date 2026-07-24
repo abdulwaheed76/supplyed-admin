@@ -1,11 +1,15 @@
 "use client"
 
 import * as React from "react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
+import { logoutAction } from "@/app/actions/auth"
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarHeader,
   SidebarMenu,
@@ -16,7 +20,7 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { BoxesIcon } from "lucide-react"
+import { BoxesIcon, LogOutIcon } from "lucide-react"
 
 const data = {
   navMain: [
@@ -103,6 +107,17 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const router = useRouter()
+  const queryClient = useQueryClient()
+  const logoutMutation = useMutation({
+    mutationFn: logoutAction,
+    onSuccess: () => {
+      queryClient.clear()
+      router.replace("/login")
+      router.refresh()
+    },
+  })
+
   return (
     <Sidebar {...props}>
       <SidebarHeader>
@@ -150,6 +165,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              type="button"
+              tooltip="Sign out"
+              disabled={logoutMutation.isPending}
+              onClick={() => logoutMutation.mutate()}
+            >
+              <LogOutIcon />
+              <span>
+                {logoutMutation.isPending ? "Signing out..." : "Sign out"}
+              </span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )

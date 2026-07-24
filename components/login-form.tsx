@@ -1,26 +1,71 @@
-import Image from "next/image"
+"use client"
 
+import * as React from "react"
+import { useMutation } from "@tanstack/react-query"
+import Image from "next/image"
+import { useRouter } from "next/navigation"
+
+import { loginAction } from "@/app/actions/auth"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 
+type LoginInput = {
+  email: string
+  password: string
+}
+
+async function login(input: LoginInput) {
+  const result = await loginAction(input)
+
+  if (!result.ok) {
+    throw new Error(result.message)
+  }
+
+  return result
+}
+
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const router = useRouter()
+  const loginMutation = useMutation({
+    mutationFn: login,
+    onSuccess: () => {
+      router.replace("/dashboard")
+      router.refresh()
+    },
+  })
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const formData = new FormData(event.currentTarget)
+    const email = formData.get("email")
+    const password = formData.get("password")
+
+    if (typeof email !== "string" || typeof password !== "string") {
+      return
+    }
+
+    loginMutation.mutate({ email, password })
+  }
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="overflow-hidden p-0">
         <CardContent className="grid p-0 md:grid-cols-2">
-          <form className="p-6 md:p-8">
+          <form className="p-6 md:p-8" onSubmit={handleSubmit}>
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
                 <h1 className="text-2xl font-bold">Welcome back</h1>
@@ -32,8 +77,12 @@ export function LoginForm({
                 <FieldLabel htmlFor="email">Email</FieldLabel>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="m@example.com"
+                  aria-invalid={loginMutation.isError}
+                  disabled={loginMutation.isPending}
                   required
                 />
               </Field>
@@ -47,10 +96,24 @@ export function LoginForm({
                     Forgot your password?
                   </a>
                 </div>
-                <Input id="password" type="password" required />
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  aria-invalid={loginMutation.isError}
+                  disabled={loginMutation.isPending}
+                  minLength={8}
+                  required
+                />
               </Field>
               <Field>
-                <Button type="submit">Login</Button>
+                {loginMutation.error ? (
+                  <FieldError>{loginMutation.error.message}</FieldError>
+                ) : null}
+                <Button type="submit" disabled={loginMutation.isPending}>
+                  {loginMutation.isPending ? "Signing in..." : "Login"}
+                </Button>
               </Field>
               <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
                 Or continue with
