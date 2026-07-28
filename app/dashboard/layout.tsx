@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation"
 
+import { AppSidebar } from "@/components/app-sidebar"
+import { DashboardHeader } from "@/components/dashboard-header"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { getCurrentSession } from "@/lib/auth/session"
 
 export default async function DashboardLayout({
@@ -11,5 +14,13 @@ export default async function DashboardLayout({
     redirect("/login?next=/dashboard")
   }
 
-  return children
+  return (
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <DashboardHeader user={session} />
+        {children}
+      </SidebarInset>
+    </SidebarProvider>
+  )
 }

@@ -1,10 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 
 import { authenticateAdmin } from "@/lib/auth/authenticate"
-import {
-  ACCESS_TOKEN_COOKIE_NAME,
-  getAccessTokenCookieOptions,
-} from "@/lib/auth/session-cookie"
+import { getSessionCookies } from "@/lib/auth/session-cookie"
 
 function isSameOrigin(request: NextRequest) {
   const origin = request.headers.get("origin")
@@ -42,11 +39,10 @@ export async function POST(request: NextRequest) {
 
   const response = NextResponse.json({ user: result.user })
 
-  response.cookies.set(
-    ACCESS_TOKEN_COOKIE_NAME,
-    result.accessToken,
-    getAccessTokenCookieOptions(result.expiresIn)
-  )
+  for (const cookie of getSessionCookies(result)) {
+    response.cookies.set(cookie)
+  }
+
   response.headers.set("Cache-Control", "no-store")
 
   return response

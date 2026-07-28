@@ -1,11 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 
-import { logoutAction } from "@/app/actions/auth"
 import {
   Sidebar,
   SidebarContent,
@@ -15,108 +13,32 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { BoxesIcon, LogOutIcon } from "lucide-react"
+import {
+  BoxesIcon,
+  LayoutDashboardIcon,
+  LogOutIcon,
+  UsersIcon,
+} from "lucide-react"
+import { useLogout } from "@/hooks/use-logout"
 
-const data = {
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      items: [
-        {
-          title: "Overview",
-          url: "/dashboard",
-          isActive: true,
-        },
-        {
-          title: "Activity",
-          url: "#",
-        },
-        {
-          title: "Analytics",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Commerce",
-      url: "#",
-      items: [
-        {
-          title: "Orders",
-          url: "#",
-        },
-        {
-          title: "Products",
-          url: "#",
-        },
-        {
-          title: "Inventory",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Partners",
-      url: "#",
-      items: [
-        {
-          title: "Suppliers",
-          url: "#",
-        },
-        {
-          title: "Customers",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Operations",
-      url: "#",
-      items: [
-        {
-          title: "Shipments",
-          url: "#",
-        },
-        {
-          title: "Purchase Orders",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Insights",
-      url: "#",
-      items: [
-        {
-          title: "Reports",
-          url: "#",
-        },
-        {
-          title: "Audit Log",
-          url: "#",
-        },
-      ],
-    },
-  ],
-}
+const navigation = [
+  {
+    title: "Dashboard",
+    url: "/dashboard",
+    Icon: LayoutDashboardIcon,
+  },
+  {
+    title: "Users",
+    url: "/dashboard/users",
+    Icon: UsersIcon,
+  },
+]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const router = useRouter()
-  const queryClient = useQueryClient()
-  const logoutMutation = useMutation({
-    mutationFn: logoutAction,
-    onSuccess: () => {
-      queryClient.clear()
-      router.replace("/login")
-      router.refresh()
-    },
-  })
+  const pathname = usePathname()
+  const logoutMutation = useLogout()
 
   return (
     <Sidebar {...props}>
@@ -142,24 +64,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {data.navMain.map((item) => (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild>
-                  <Link href={item.url} className="font-medium">
-                    {item.title}
+            {navigation.map(({ Icon, title, url }) => (
+              <SidebarMenuItem key={title}>
+                <SidebarMenuButton asChild isActive={pathname === url}>
+                  <Link href={url} className="font-medium">
+                    <Icon />
+                    {title}
                   </Link>
                 </SidebarMenuButton>
-                {item.items?.length ? (
-                  <SidebarMenuSub>
-                    {item.items.map((item) => (
-                      <SidebarMenuSubItem key={item.title}>
-                        <SidebarMenuSubButton asChild isActive={item.isActive}>
-                          <Link href={item.url}>{item.title}</Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    ))}
-                  </SidebarMenuSub>
-                ) : null}
               </SidebarMenuItem>
             ))}
           </SidebarMenu>

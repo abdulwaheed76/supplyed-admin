@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { getAuthConfig } from "@/lib/auth/config"
+import { createAuthApiUrl, getAuthConfig } from "@/lib/auth/config"
 import { loginSchema } from "@/lib/auth/validation"
 
 type AuthUser = {
@@ -11,7 +11,14 @@ type AuthUser = {
 }
 
 type AuthenticationResult =
-  | { ok: true; accessToken: string; expiresIn: number; user: AuthUser }
+  | {
+      ok: true
+      accessToken: string
+      refreshToken: string
+      accessTokenExpiresIn: number
+      refreshTokenExpiresIn: number
+      user: AuthUser
+    }
   | { ok: false; message: string; status: number }
 
 const backendUserSchema = z.object({
@@ -28,7 +35,9 @@ const loginResponseSchema = z.object({
     .object({
       user: backendUserSchema.optional(),
       accessToken: z.string().optional(),
+      refreshToken: z.string().optional(),
       accessTokenExpiresInSeconds: z.number().int().positive().optional(),
+      refreshTokenExpiresInSeconds: z.number().int().positive().optional(),
       otpToken: z.string().optional(),
       twoFactorRequired: z.boolean().optional(),
       twoFactorToken: z.string().optional(),
@@ -66,7 +75,7 @@ export async function authenticateAdmin(
   let response: Response
 
   try {
-    response = await fetch(new URL("/auth/login", config.apiBaseUrl), {
+    response = await fetch(createAuthApiUrl(config, "auth/login"), {
       method: "POST",
       headers: {
         Accept: "application/json",
@@ -126,7 +135,9 @@ export async function authenticateAdmin(
   if (
     !data.user ||
     !data.accessToken ||
-    !data.accessTokenExpiresInSeconds
+    !data.refreshToken ||
+    !data.accessTokenExpiresInSeconds ||
+    !data.refreshTokenExpiresInSeconds
   ) {
     return {
       ok: false,
@@ -146,7 +157,9 @@ export async function authenticateAdmin(
   return {
     ok: true,
     accessToken: data.accessToken,
-    expiresIn: data.accessTokenExpiresInSeconds,
+    refreshToken: data.refreshToken,
+    accessTokenExpiresIn: data.accessTokenExpiresInSeconds,
+    refreshTokenExpiresIn: data.refreshTokenExpiresInSeconds,
     user: { ...data.user, role: "ADMIN" },
   }
 }

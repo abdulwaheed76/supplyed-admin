@@ -5,7 +5,6 @@ import { useMutation } from "@tanstack/react-query"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 
-import { loginAction } from "@/app/actions/auth"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -25,10 +24,26 @@ type LoginInput = {
 }
 
 async function login(input: LoginInput) {
-  const result = await loginAction(input)
+  const response = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  })
+  const result: unknown = await response.json().catch(() => null)
 
-  if (!result.ok) {
-    throw new Error(result.message)
+  if (!response.ok) {
+    const message =
+      result &&
+      typeof result === "object" &&
+      "message" in result &&
+      typeof result.message === "string"
+        ? result.message
+        : "Unable to sign in."
+
+    throw new Error(message)
   }
 
   return result

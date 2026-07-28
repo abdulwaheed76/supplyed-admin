@@ -1,9 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 
-import {
-  ACCESS_TOKEN_COOKIE_NAME,
-  getAccessTokenCookieOptions,
-} from "@/lib/auth/session-cookie"
+import { getClearedSessionCookies } from "@/lib/auth/session-cookie"
 
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin")
@@ -17,10 +14,10 @@ export async function POST(request: NextRequest) {
 
   const response = NextResponse.json({ success: true })
 
-  response.cookies.set(ACCESS_TOKEN_COOKIE_NAME, "", {
-    ...getAccessTokenCookieOptions(0),
-    maxAge: 0,
-  })
+  for (const cookie of getClearedSessionCookies()) {
+    response.cookies.set(cookie)
+  }
+
   response.headers.set("Cache-Control", "no-store")
 
   return response

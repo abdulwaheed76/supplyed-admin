@@ -1,7 +1,7 @@
 import { cookies } from "next/headers"
 import { z } from "zod"
 
-import { getAuthConfig } from "@/lib/auth/config"
+import { createAuthApiUrl, getAuthConfig } from "@/lib/auth/config"
 import { ACCESS_TOKEN_COOKIE_NAME } from "@/lib/auth/session-cookie"
 
 const sessionResponseSchema = z.object({
@@ -24,7 +24,7 @@ export async function getCurrentSession() {
   }
 
   try {
-    const response = await fetch(new URL("/auth/me", config.apiBaseUrl), {
+    const response = await fetch(createAuthApiUrl(config, "auth/me"), {
       headers: {
         Accept: "application/json",
         Authorization: `Bearer ${accessToken}`,
