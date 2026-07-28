@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { InstructorStatusControl } from "@/components/users/instructor-status-control"
 import type { InstructorProfile } from "@/lib/users/get-role-profile"
 
 type InstructorProfileCardProps = {
@@ -56,9 +57,11 @@ export function InstructorProfileCard({ profile }: InstructorProfileCardProps) {
           Teaching, availability, verification, and rating information.
         </CardDescription>
         <CardAction>
-          <span className="inline-flex rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-            {profile.status}
-          </span>
+          <InstructorStatusControl
+            profileId={profile.id}
+            userId={profile.userId}
+            currentStatus={profile.status}
+          />
         </CardAction>
       </CardHeader>
       <CardContent className="space-y-6">

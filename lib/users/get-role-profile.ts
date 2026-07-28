@@ -5,6 +5,7 @@ import { z } from "zod"
 
 import { createAuthApiUrl, getAuthConfig } from "@/lib/auth/config"
 import { ACCESS_TOKEN_COOKIE_NAME } from "@/lib/auth/session-cookie"
+import { profileStatusSchema } from "@/lib/users/profile-status-schema"
 import type { UserListItem } from "@/lib/users/schema"
 
 const instructorProfileSchema = z.object({
@@ -24,7 +25,7 @@ const instructorProfileSchema = z.object({
   ratingAverage: z.number(),
   ratingCount: z.number().int().nonnegative(),
   dbsVerified: z.boolean(),
-  status: z.string(),
+  status: profileStatusSchema,
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 })
@@ -42,9 +43,15 @@ const institutionProfileSchema = z.object({
   postalCode: z.string().nullable().optional(),
   countryCode: z.string(),
   staffingNeeds: z.string().nullable().optional(),
+  coverTypes: z.array(z.string()),
+  typicalPupilCount: z.number().int().nonnegative().nullable().optional(),
+  complianceContact: z.string().nullable().optional(),
+  complianceEmail: z.email().nullable().optional(),
+  safeguardingConfirmed: z.boolean(),
   userRole: z.string().nullable().optional(),
   verified: z.boolean(),
   subscriptionTier: z.string().nullable().optional(),
+  status: profileStatusSchema,
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 })

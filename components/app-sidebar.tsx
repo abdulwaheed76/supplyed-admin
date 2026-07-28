@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { Collapsible as CollapsiblePrimitive } from "radix-ui"
 
 import {
   Sidebar,
@@ -13,10 +14,16 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
 import {
   BoxesIcon,
+  ChevronRightIcon,
+  FileCheck2Icon,
+  LayoutGridIcon,
   LayoutDashboardIcon,
   LogOutIcon,
   UsersIcon,
@@ -30,15 +37,23 @@ const navigation = [
     Icon: LayoutDashboardIcon,
   },
   {
-    title: "Users",
+    title: "User management",
     url: "/dashboard/users",
     Icon: UsersIcon,
+  },
+  {
+    title: "Document queue",
+    url: "/dashboard/document-queue",
+    Icon: FileCheck2Icon,
   },
 ]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const logoutMutation = useLogout()
+  const isOverviewActive = navigation.some(({ url }) =>
+    url === "/dashboard" ? pathname === url : pathname.startsWith(url)
+  )
 
   return (
     <Sidebar {...props}>
@@ -64,16 +79,45 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {navigation.map(({ Icon, title, url }) => (
-              <SidebarMenuItem key={title}>
-                <SidebarMenuButton asChild isActive={pathname === url}>
-                  <Link href={url} className="font-medium">
-                    <Icon />
-                    {title}
-                  </Link>
-                </SidebarMenuButton>
+            <CollapsiblePrimitive.Root
+              defaultOpen
+              asChild
+            >
+              <SidebarMenuItem className="group/collapsible">
+                <CollapsiblePrimitive.Trigger asChild>
+                  <SidebarMenuButton
+                    tooltip="Overview"
+                    isActive={isOverviewActive}
+                    className="font-medium"
+                  >
+                    <LayoutGridIcon />
+                    <span>Overview</span>
+                    <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                  </SidebarMenuButton>
+                </CollapsiblePrimitive.Trigger>
+                <CollapsiblePrimitive.Content>
+                  <SidebarMenuSub>
+                    {navigation.map(({ Icon, title, url }) => {
+                      const isActive =
+                        url === "/dashboard"
+                          ? pathname === url
+                          : pathname.startsWith(url)
+
+                      return (
+                        <SidebarMenuSubItem key={title}>
+                          <SidebarMenuSubButton asChild isActive={isActive}>
+                            <Link href={url}>
+                              <Icon />
+                              <span>{title}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      )
+                    })}
+                  </SidebarMenuSub>
+                </CollapsiblePrimitive.Content>
               </SidebarMenuItem>
-            ))}
+            </CollapsiblePrimitive.Root>
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>

@@ -31,6 +31,10 @@ function getPageLabel(pathname: string) {
     return "User details"
   }
 
+  if (pathname === "/dashboard/document-queue") {
+    return "Document queue"
+  }
+
   if (pathname === "/dashboard/settings") {
     return "Account settings"
   }

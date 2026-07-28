@@ -10,7 +10,12 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { InstitutionProfileCard } from "@/components/users/institution-profile-card"
+import { InstructorDocumentsCard } from "@/components/users/instructor-documents-card"
 import { InstructorProfileCard } from "@/components/users/instructor-profile-card"
+import {
+  getInstructorDocuments,
+  type GetInstructorDocumentsResult,
+} from "@/lib/documents/get-instructor-documents"
 import { getUser } from "@/lib/users/get-user"
 import {
   getRoleProfile,
@@ -85,11 +90,51 @@ function RoleProfileView({ result }: { result: RoleProfileResult | null }) {
   )
 }
 
+function InstructorDocumentsView({
+  result,
+  userId,
+}: {
+  result: GetInstructorDocumentsResult | null
+  userId: string
+}) {
+  if (!result) {
+    return null
+  }
+
+  if (!result.ok) {
+    return (
+      <Card role="alert">
+        <CardHeader>
+          <CardTitle>Unable to load documents</CardTitle>
+          <CardDescription>{result.message}</CardDescription>
+        </CardHeader>
+      </Card>
+    )
+  }
+
+  return (
+    <InstructorDocumentsCard documents={result.documents} userId={userId} />
+  )
+}
+
 export default async function UserDetailsPage({
   params,
 }: UserDetailsPageProps) {
   const result = await getUser((await params).id)
-  const roleProfile = result.ok ? await getRoleProfile(result.user) : null
+  let roleProfile: RoleProfileResult | null = null
+  let instructorDocuments: GetInstructorDocumentsResult | null = null
+
+  if (result.ok) {
+    const [profileResult, documentsResult] = await Promise.all([
+      getRoleProfile(result.user),
+      result.user.role === "INSTRUCTOR"
+        ? getInstructorDocuments(result.user.id)
+        : Promise.resolve(null),
+    ])
+
+    roleProfile = profileResult
+    instructorDocuments = documentsResult
+  }
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-6 p-4 md:p-6">
@@ -139,6 +184,11 @@ export default async function UserDetailsPage({
             </Card>
 
             <RoleProfileView result={roleProfile} />
+
+            <InstructorDocumentsView
+              result={instructorDocuments}
+              userId={result.user.id}
+            />
 
             <div className="grid gap-4 lg:grid-cols-2">
               <Card>

@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { InstitutionStatusControl } from "@/components/users/instructor-status-control"
 import type { InstitutionProfile } from "@/lib/users/get-role-profile"
 
 type InstitutionProfileCardProps = {
@@ -25,6 +26,14 @@ export function InstitutionProfileCard({
     .filter(Boolean)
     .join(", ")
 
+  const coverTypes = [
+    ...new Set(
+      profile.coverTypes
+        .map((coverType) => coverType.trim())
+        .filter((coverType) => coverType.length > 0)
+    ),
+  ]
+
   return (
     <Card>
       <CardHeader className="border-b">
@@ -33,15 +42,11 @@ export function InstitutionProfileCard({
           Organisation, registration, subscription, and staffing information.
         </CardDescription>
         <CardAction>
-          <span
-            className={
-              profile.verified
-                ? "inline-flex rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400"
-                : "inline-flex rounded-full bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-400"
-            }
-          >
-            {profile.verified ? "Verified" : "Not verified"}
-          </span>
+          <InstitutionStatusControl
+            profileId={profile.id}
+            userId={profile.userId}
+            currentStatus={profile.status}
+          />
         </CardAction>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -77,6 +82,30 @@ export function InstitutionProfileCard({
           </div>
           <div>
             <dt className="text-xs font-medium text-muted-foreground">
+              Typical pupil count
+            </dt>
+            <dd className="mt-1 font-medium">
+              {profile.typicalPupilCount?.toLocaleString() ?? "—"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium text-muted-foreground">
+              Verification
+            </dt>
+            <dd className="mt-1 font-medium">
+              {profile.verified ? "Verified" : "Not verified"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium text-muted-foreground">
+              Safeguarding
+            </dt>
+            <dd className="mt-1 font-medium">
+              {profile.safeguardingConfirmed ? "Confirmed" : "Not confirmed"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium text-muted-foreground">
               Profile ID
             </dt>
             <dd className="mt-1 break-all font-mono text-xs">{profile.id}</dd>
@@ -89,13 +118,76 @@ export function InstitutionProfileCard({
           </div>
         </dl>
 
-        <div className="border-t pt-5">
-          <h3 className="text-xs font-medium text-muted-foreground">
-            Staffing needs
-          </h3>
-          <p className="mt-2 max-w-3xl text-sm leading-relaxed">
-            {profile.staffingNeeds || "No staffing needs have been provided."}
-          </p>
+        <div className="grid min-w-0 gap-6 border-t pt-5 lg:grid-cols-2">
+          <section className="min-w-0">
+            <h3 className="text-sm font-semibold">Staffing requirements</h3>
+            <div className="mt-4 space-y-5">
+              <div>
+                <h4 className="text-xs font-medium text-muted-foreground">
+                  Staffing needs
+                </h4>
+                <p className="mt-2 max-w-full break-words text-sm leading-relaxed [overflow-wrap:anywhere]">
+                  {profile.staffingNeeds ||
+                    "No staffing needs have been provided."}
+                </p>
+              </div>
+              <div>
+                <h4 className="text-xs font-medium text-muted-foreground">
+                  Cover types
+                </h4>
+                {coverTypes.length > 0 ? (
+                  <ul
+                    className="mt-2 flex flex-wrap gap-2"
+                    aria-label="Cover types"
+                  >
+                    {coverTypes.map((coverType) => (
+                      <li
+                        key={coverType}
+                        className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium"
+                      >
+                        {coverType}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    No cover types have been provided.
+                  </p>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="min-w-0">
+            <h3 className="text-sm font-semibold">Compliance contact</h3>
+            <dl className="mt-4 grid min-w-0 gap-5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              <div className="min-w-0">
+                <dt className="text-xs font-medium text-muted-foreground">
+                  Contact name
+                </dt>
+                <dd className="mt-1 break-words font-medium [overflow-wrap:anywhere]">
+                  {profile.complianceContact || "—"}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-xs font-medium text-muted-foreground">
+                  Contact email
+                </dt>
+                <dd className="mt-1 break-all font-medium">
+                  {profile.complianceEmail ? (
+                    <a
+                      className="text-primary underline-offset-4 hover:underline"
+                      href={`mailto:${profile.complianceEmail}`}
+                    >
+                      {profile.complianceEmail}
+                    </a>
+                  ) : (
+                    "—"
+                  )}
+                </dd>
+              </div>
+            </dl>
+          </section>
         </div>
       </CardContent>
     </Card>

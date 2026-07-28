@@ -14,7 +14,7 @@ const instructorStatusSchema = z.object({
 
 const institutionStatusSchema = z.object({
   userId: z.string(),
-  verified: z.boolean(),
+  status: z.string(),
 })
 
 type ProfileStatusesResult =
@@ -115,7 +115,7 @@ export async function getProfileStatuses(
   }
 
   for (const profile of institutionResult.profiles) {
-    statuses[profile.userId] = profile.verified ? "VERIFIED" : "PENDING"
+    statuses[profile.userId] = profile.status
   }
 
   return { ok: true, statuses }
