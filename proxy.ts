@@ -1,65 +1,23 @@
-import { NextResponse, type NextRequest } from "next/server"
+import { auth } from "@/auth"
 
-import { refreshAdminSession } from "@/lib/auth/refresh"
-import {
-  ACCESS_TOKEN_COOKIE_NAME,
-  getClearedSessionCookies,
-  getSessionCookies,
-  REFRESH_TOKEN_COOKIE_NAME,
-} from "@/lib/auth/session-cookie"
-
-function createLoginRedirect(request: NextRequest) {
-  const loginUrl = new URL("/login", request.url)
-  loginUrl.searchParams.set(
-    "next",
-    `${request.nextUrl.pathname}${request.nextUrl.search}`
-  )
-
-  return NextResponse.redirect(loginUrl)
-}
-
-export async function proxy(request: NextRequest) {
-  if (request.cookies.has(ACCESS_TOKEN_COOKIE_NAME)) {
-    return NextResponse.next()
-  }
-
-  const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE_NAME)?.value
-
-  if (!refreshToken) {
-    return createLoginRedirect(request)
-  }
-
-  const result = await refreshAdminSession(refreshToken)
-
-  if (!result.ok) {
-    const response = createLoginRedirect(request)
-
-    if (result.status < 500) {
-      for (const cookie of getClearedSessionCookies()) {
-        response.cookies.set(cookie)
-      }
-    }
-
-    response.headers.set("Cache-Control", "no-store")
-
-    return response
-  }
-
-  const response = NextResponse.redirect(request.nextUrl)
-
-  for (const cookie of getSessionCookies(result)) {
-    response.cookies.set(cookie)
-  }
-
-  response.headers.set("Cache-Control", "no-store")
-
-  return response
-}
+/**
+ * Route gating only. The `authorized` callback in `auth.ts` decides what passes;
+ * this file exists to attach it to the matcher below.
+ *
+ * Resolving the session here also gives the `jwt` callback a context that can
+ * persist a rotated token — Server Components cannot set cookies, so a refresh
+ * triggered during render would be thrown away. Keeping the matcher ahead of
+ * every authenticated route means the token is already fresh by the time a page
+ * renders.
+ */
+export const proxy = auth
 
 export const config = {
   matcher: [
     "/dashboard/:path*",
     "/api/documents/:path*",
+    "/api/institutions/:path*",
     "/api/instructors/:path*",
+    "/api/jobs/:path*",
   ],
 }

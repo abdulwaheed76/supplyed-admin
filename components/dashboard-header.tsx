@@ -35,6 +35,18 @@ function getPageLabel(pathname: string) {
     return "Document queue"
   }
 
+  if (pathname === "/dashboard/jobs") {
+    return "Jobs"
+  }
+
+  if (pathname === "/dashboard/jobs/new") {
+    return "Create job"
+  }
+
+  if (pathname.startsWith("/dashboard/jobs/")) {
+    return "Job details"
+  }
+
   if (pathname === "/dashboard/settings") {
     return "Account settings"
   }

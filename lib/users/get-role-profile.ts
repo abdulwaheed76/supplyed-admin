@@ -1,10 +1,8 @@
 import "server-only"
 
-import { cookies } from "next/headers"
 import { z } from "zod"
 
-import { createAuthApiUrl, getAuthConfig } from "@/lib/auth/config"
-import { ACCESS_TOKEN_COOKIE_NAME } from "@/lib/auth/session-cookie"
+import { adminApiRequest } from "@/lib/api/admin-api-client"
 import { profileStatusSchema } from "@/lib/users/profile-status-schema"
 import type { UserListItem } from "@/lib/users/schema"
 
@@ -56,10 +54,6 @@ const institutionProfileSchema = z.object({
   updatedAt: z.string().optional(),
 })
 
-const errorResponseSchema = z.object({
-  message: z.union([z.string(), z.array(z.string())]),
-})
-
 export type InstructorProfile = z.infer<typeof instructorProfileSchema>
 export type InstitutionProfile = z.infer<typeof institutionProfileSchema>
 
@@ -68,18 +62,6 @@ export type RoleProfileResult =
   | { ok: true; kind: "institution"; profile: InstitutionProfile | null }
   | { ok: true; kind: "none"; profile: null }
   | { ok: false; message: string; status: number }
-
-function getErrorMessage(body: unknown, fallback: string) {
-  const error = errorResponseSchema.safeParse(body)
-
-  if (!error.success) {
-    return fallback
-  }
-
-  return Array.isArray(error.data.message)
-    ? error.data.message.join(" ")
-    : error.data.message
-}
 
 export async function getRoleProfile(
   user: UserListItem
@@ -91,94 +73,51 @@ export async function getRoleProfile(
     return { ok: true, kind: "none", profile: null }
   }
 
-  const cookieStore = await cookies()
-  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE_NAME)?.value
-  const config = getAuthConfig()
-
-  if (!accessToken) {
-    return {
-      ok: false,
-      message: "Your session has expired. Sign in again.",
-      status: 401,
-    }
-  }
-
-  if (!config) {
-    return {
-      ok: false,
-      message: "The backend API URL is not configured.",
-      status: 503,
-    }
-  }
-
   const resource = isInstructor ? "instructors" : "institutions"
-  let response: Response
-
-  try {
-    response = await fetch(createAuthApiUrl(config, resource), {
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      cache: "no-store",
-    })
-  } catch {
-    return {
-      ok: false,
-      message: `The ${resource} service is unavailable.`,
-      status: 503,
-    }
-  }
-
-  const body: unknown = await response.json().catch(() => null)
-
-  if (process.env.NODE_ENV !== "production") {
-    console.info(`[${resource}-api] Response`, {
-      status: response.status,
-      ok: response.ok,
-      userId: "[REDACTED]",
-    })
-  }
-
-  if (!response.ok) {
-    return {
-      ok: false,
-      message: getErrorMessage(body, `Unable to load ${resource}.`),
-      status: response.status,
-    }
-  }
-
-  const schema = z.object({
-    success: z.literal(true),
-    data: z.array(
-      isInstructor ? instructorProfileSchema : institutionProfileSchema
-    ),
-  })
-  const result = schema.safeParse(body)
-
-  if (!result.success) {
-    return {
-      ok: false,
-      message: `The ${resource} service returned an invalid response.`,
-      status: 502,
-    }
-  }
 
   if (isInstructor) {
-    const profiles = result.data.data as InstructorProfile[]
+    const result = await adminApiRequest({
+      path: resource,
+      schema: z.object({
+        success: z.literal(true),
+        data: z.array(instructorProfileSchema),
+      }),
+      serviceName: resource,
+      fallbackMessage: `Unable to load ${resource}.`,
+      debugLabel: `${resource}-api`,
+    })
+
+    if (!result.ok) {
+      return result
+    }
 
     return {
       ok: true,
       kind: "instructor",
-      profile: profiles.find((profile) => profile.userId === user.id) ?? null,
+      profile:
+        result.data.data.find((profile) => profile.userId === user.id) ?? null,
     }
   }
 
-  const profiles = result.data.data as InstitutionProfile[]
+  const result = await adminApiRequest({
+    path: resource,
+    schema: z.object({
+      success: z.literal(true),
+      data: z.array(institutionProfileSchema),
+    }),
+    serviceName: resource,
+    fallbackMessage: `Unable to load ${resource}.`,
+    debugLabel: `${resource}-api`,
+  })
+
+  if (!result.ok) {
+    return result
+  }
 
   return {
     ok: true,
     kind: "institution",
-    profile: profiles.find((profile) => profile.userId === user.id) ?? null,
+    profile:
+      result.data.data.find((profile) => profile.userId === user.id) ?? null,
   }
 }

@@ -1,10 +1,8 @@
 import "server-only"
 
-import { cookies } from "next/headers"
 import { z } from "zod"
 
-import { createAuthApiUrl, getAuthConfig } from "@/lib/auth/config"
-import { ACCESS_TOKEN_COOKIE_NAME } from "@/lib/auth/session-cookie"
+import { adminApiRequest } from "@/lib/api/admin-api-client"
 import { userSchema, type UserListItem } from "@/lib/users/schema"
 
 const paginationSchema = z
@@ -44,10 +42,6 @@ const usersResponseSchema = z.object({
   meta: z.unknown().optional(),
 })
 
-const errorResponseSchema = z.object({
-  message: z.union([z.string(), z.array(z.string())]),
-})
-
 type GetUsersResult =
   | {
       ok: true
@@ -65,70 +59,6 @@ type GetUsersResult =
 type GetUsersOptions = {
   page: number
   limit: number
-}
-
-function summarizeResponseBody(body: unknown) {
-  if (Array.isArray(body)) {
-    return { type: "array", itemCount: body.length }
-  }
-
-  if (!body || typeof body !== "object") {
-    return { type: typeof body }
-  }
-
-  const envelope = body as Record<string, unknown>
-  const data = envelope.data
-  const dataSummary = Array.isArray(data)
-    ? { type: "array", itemCount: data.length }
-    : data && typeof data === "object"
-      ? {
-          type: "object",
-          keys: Object.keys(data),
-          arrayCounts: Object.fromEntries(
-            Object.entries(data)
-              .filter(([, value]) => Array.isArray(value))
-              .map(([key, value]) => [key, (value as unknown[]).length])
-          ),
-        }
-      : { type: typeof data }
-
-  return {
-    type: "object",
-    keys: Object.keys(envelope),
-    success: envelope.success,
-    statusCode: envelope.statusCode,
-    message: envelope.message,
-    data: dataSummary,
-  }
-}
-
-function logUsersRequest(url: URL, page: number, limit: number) {
-  if (process.env.NODE_ENV === "production") {
-    return
-  }
-
-  console.info("[users-api] Request", {
-    method: "GET",
-    url: url.toString(),
-    headers: {
-      Accept: "application/json",
-      Authorization: "Bearer [REDACTED]",
-    },
-    pagination: { page, limit },
-  })
-}
-
-function logUsersResponse(response: Response, body: unknown) {
-  if (process.env.NODE_ENV === "production") {
-    return
-  }
-
-  console.info("[users-api] Response", {
-    status: response.status,
-    statusText: response.statusText,
-    ok: response.ok,
-    body: summarizeResponseBody(body),
-  })
 }
 
 function readPagination(
@@ -163,88 +93,34 @@ export async function getUsers({
   page,
   limit,
 }: GetUsersOptions): Promise<GetUsersResult> {
-  const cookieStore = await cookies()
-  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE_NAME)?.value
-  const config = getAuthConfig()
+  const result = await adminApiRequest({
+    path: "users",
+    searchParams: { page, limit },
+    schema: usersResponseSchema,
+    serviceName: "users",
+    fallbackMessage: "Unable to load users.",
+    debugLabel: "users-api",
+  })
 
-  if (!accessToken) {
-    return {
-      ok: false,
-      message: "Your session has expired. Sign in again.",
-      status: 401,
-    }
+  if (!result.ok) {
+    return result
   }
 
-  if (!config) {
-    return {
-      ok: false,
-      message: "The backend API URL is not configured.",
-      status: 503,
-    }
-  }
-
-  const url = createAuthApiUrl(config, "users")
-  url.searchParams.set("page", String(page))
-  url.searchParams.set("limit", String(limit))
-  logUsersRequest(url, page, limit)
-
-  let response: Response
-
-  try {
-    response = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      cache: "no-store",
-    })
-  } catch {
-    return {
-      ok: false,
-      message: "The users service is unavailable.",
-      status: 503,
-    }
-  }
-
-  const body: unknown = await response.json().catch(() => null)
-  logUsersResponse(response, body)
-
-  if (!response.ok) {
-    const error = errorResponseSchema.safeParse(body)
-    const message = error.success
-      ? Array.isArray(error.data.message)
-        ? error.data.message.join(" ")
-        : error.data.message
-      : "Unable to load users."
-
-    return { ok: false, message, status: response.status }
-  }
-
-  const envelope = usersResponseSchema.safeParse(body)
-
-  if (!envelope.success) {
-    return {
-      ok: false,
-      message: "The users service returned an invalid response.",
-      status: 502,
-    }
-  }
-
-  const list = z.array(userSchema).safeParse(envelope.data.data)
+  const list = z.array(userSchema).safeParse(result.data.data)
 
   if (list.success) {
     return {
       ok: true,
       users: list.data,
       pagination: readPagination(
-        envelope.data.meta,
+        result.data.meta,
         { page, limit },
         list.data.length
       ),
     }
   }
 
-  const paginated = paginatedUsersSchema.safeParse(envelope.data.data)
+  const paginated = paginatedUsersSchema.safeParse(result.data.data)
 
   if (!paginated.success) {
     return {

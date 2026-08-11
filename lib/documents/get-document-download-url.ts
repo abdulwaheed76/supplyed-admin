@@ -1,10 +1,8 @@
 import "server-only"
 
-import { cookies } from "next/headers"
 import { z } from "zod"
 
-import { createAuthApiUrl, getAuthConfig } from "@/lib/auth/config"
-import { ACCESS_TOKEN_COOKIE_NAME } from "@/lib/auth/session-cookie"
+import { adminApiRequest } from "@/lib/api/admin-api-client"
 
 export type GetDocumentDownloadUrlResult =
   | { ok: true; downloadUrl: URL; expiresAt: string }
@@ -18,10 +16,6 @@ const downloadResponseSchema = z.object({
   }),
 })
 
-const errorResponseSchema = z.object({
-  message: z.union([z.string(), z.array(z.string())]),
-})
-
 export async function getDocumentDownloadUrl(
   documentId: string
 ): Promise<GetDocumentDownloadUrlResult> {
@@ -31,71 +25,15 @@ export async function getDocumentDownloadUrl(
     return { ok: false, message: "The document ID is invalid.", status: 400 }
   }
 
-  const cookieStore = await cookies()
-  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE_NAME)?.value
-  const config = getAuthConfig()
+  const result = await adminApiRequest({
+    path: `documents/${encodeURIComponent(normalizedDocumentId)}/download-url`,
+    schema: downloadResponseSchema,
+    serviceName: "documents",
+    fallbackMessage: "Unable to open this document.",
+  })
 
-  if (!accessToken) {
-    return {
-      ok: false,
-      message: "Your session has expired. Sign in again.",
-      status: 401,
-    }
-  }
-
-  if (!config) {
-    return {
-      ok: false,
-      message: "The backend API URL is not configured.",
-      status: 503,
-    }
-  }
-
-  let response: Response
-
-  try {
-    response = await fetch(
-      createAuthApiUrl(
-        config,
-        `documents/${encodeURIComponent(normalizedDocumentId)}/download-url`
-      ),
-      {
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        cache: "no-store",
-      }
-    )
-  } catch {
-    return {
-      ok: false,
-      message: "The documents service is unavailable.",
-      status: 503,
-    }
-  }
-
-  const body: unknown = await response.json().catch(() => null)
-
-  if (!response.ok) {
-    const error = errorResponseSchema.safeParse(body)
-    const message = error.success
-      ? Array.isArray(error.data.message)
-        ? error.data.message.join(" ")
-        : error.data.message
-      : "Unable to open this document."
-
-    return { ok: false, message, status: response.status }
-  }
-
-  const result = downloadResponseSchema.safeParse(body)
-
-  if (!result.success) {
-    return {
-      ok: false,
-      message: "The documents service returned an invalid response.",
-      status: 502,
-    }
+  if (!result.ok) {
+    return result
   }
 
   const downloadUrl = new URL(result.data.data.downloadUrl)

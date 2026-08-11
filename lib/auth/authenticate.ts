@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 import { createAuthApiUrl, getAuthConfig } from "@/lib/auth/config"
+import type { SignInErrorCode } from "@/lib/auth/errors"
 import { loginSchema } from "@/lib/auth/validation"
 
 type AuthUser = {
@@ -19,7 +20,7 @@ type AuthenticationResult =
       refreshTokenExpiresIn: number
       user: AuthUser
     }
-  | { ok: false; message: string; status: number }
+  | { ok: false; code: SignInErrorCode }
 
 const backendUserSchema = z.object({
   id: z.string(),
@@ -45,31 +46,19 @@ const loginResponseSchema = z.object({
     .nullable(),
 })
 
-const errorResponseSchema = z.object({
-  message: z.string(),
-})
-
 export async function authenticateAdmin(
   input: unknown
 ): Promise<AuthenticationResult> {
   const credentials = loginSchema.safeParse(input)
 
   if (!credentials.success) {
-    return {
-      ok: false,
-      message: "Enter a valid email and password.",
-      status: 400,
-    }
+    return { ok: false, code: "invalid_credentials" }
   }
 
   const config = getAuthConfig()
 
   if (!config) {
-    return {
-      ok: false,
-      message: "The backend API URL is not configured.",
-      status: 503,
-    }
+    return { ok: false, code: "service_unavailable" }
   }
 
   let response: Response
@@ -85,51 +74,33 @@ export async function authenticateAdmin(
       cache: "no-store",
     })
   } catch {
-    return {
-      ok: false,
-      message: "The authentication service is unavailable.",
-      status: 503,
-    }
+    return { ok: false, code: "service_unavailable" }
   }
 
   const body: unknown = await response.json().catch(() => null)
 
   if (!response.ok) {
-    const error = errorResponseSchema.safeParse(body)
-
     return {
       ok: false,
-      message: error.success ? error.data.message : "Unable to sign in.",
-      status: response.status,
+      code:
+        response.status >= 500 ? "service_unavailable" : "invalid_credentials",
     }
   }
 
   const result = loginResponseSchema.safeParse(body)
 
   if (!result.success || !result.data.success || !result.data.data) {
-    return {
-      ok: false,
-      message: "The authentication service returned an invalid response.",
-      status: 502,
-    }
+    return { ok: false, code: "service_unavailable" }
   }
 
   const data = result.data.data
 
   if (data.twoFactorRequired || data.twoFactorToken) {
-    return {
-      ok: false,
-      message: "Two-factor verification is required to continue.",
-      status: 409,
-    }
+    return { ok: false, code: "two_factor_required" }
   }
 
   if (data.otpToken && !data.accessToken) {
-    return {
-      ok: false,
-      message: "Verify your email before signing in to the admin portal.",
-      status: 403,
-    }
+    return { ok: false, code: "email_unverified" }
   }
 
   if (
@@ -139,19 +110,11 @@ export async function authenticateAdmin(
     !data.accessTokenExpiresInSeconds ||
     !data.refreshTokenExpiresInSeconds
   ) {
-    return {
-      ok: false,
-      message: "The authentication service did not return a session.",
-      status: 502,
-    }
+    return { ok: false, code: "service_unavailable" }
   }
 
   if (data.user.role !== "ADMIN") {
-    return {
-      ok: false,
-      message: "This account does not have administrator access.",
-      status: 403,
-    }
+    return { ok: false, code: "not_admin" }
   }
 
   return {

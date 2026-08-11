@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sidebar"
 import {
   BoxesIcon,
+  BriefcaseBusinessIcon,
   ChevronRightIcon,
   FileCheck2Icon,
   LayoutGridIcon,
@@ -45,6 +46,11 @@ const navigation = [
     title: "Document queue",
     url: "/dashboard/document-queue",
     Icon: FileCheck2Icon,
+  },
+  {
+    title: "Jobs",
+    url: "/dashboard/jobs",
+    Icon: BriefcaseBusinessIcon,
   },
 ]
 

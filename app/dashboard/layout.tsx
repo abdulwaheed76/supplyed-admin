@@ -10,6 +10,8 @@ export default async function DashboardLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const session = await getCurrentSession()
 
+  // The proxy already gates this route; this is the fallback for any render
+  // path that does not pass through it.
   if (!session) {
     redirect("/login?next=/dashboard")
   }

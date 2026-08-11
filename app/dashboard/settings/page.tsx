@@ -17,6 +17,8 @@ export default async function AccountSettingsPage() {
     redirect("/login?next=/dashboard/settings")
   }
 
+  const user = session
+
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-6 p-4 md:p-6">
       <div>
@@ -44,7 +46,7 @@ export default async function AccountSettingsPage() {
                   Name
                 </dt>
                 <dd className="mt-1 font-medium">
-                  {session.name?.trim() || "Administrator"}
+                  {user.name?.trim() || "Administrator"}
                 </dd>
               </div>
               <div>
@@ -57,14 +59,14 @@ export default async function AccountSettingsPage() {
                 <dt className="text-xs font-medium text-muted-foreground">
                   Email
                 </dt>
-                <dd className="mt-1 break-all">{session.email}</dd>
+                <dd className="mt-1 break-all">{user.email}</dd>
               </div>
               <div className="sm:col-span-2">
                 <dt className="text-xs font-medium text-muted-foreground">
                   User ID
                 </dt>
                 <dd className="mt-1 break-all font-mono text-xs">
-                  {session.id}
+                  {user.id}
                 </dd>
               </div>
             </dl>
@@ -85,8 +87,9 @@ export default async function AccountSettingsPage() {
             <div className="rounded-lg bg-muted/60 p-4">
               <p className="font-medium">Secure session enabled</p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Access and refresh tokens are stored in HttpOnly cookies and
-                cannot be read by client-side JavaScript.
+                Backend access and refresh tokens are held in an encrypted,
+                HttpOnly session cookie and are never exposed to client-side
+                JavaScript.
               </p>
             </div>
             <p className="text-xs leading-relaxed text-muted-foreground">

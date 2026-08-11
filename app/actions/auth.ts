@@ -1,15 +1,10 @@
 "use server"
 
-import { cookies } from "next/headers"
-
-import { getClearedSessionCookies } from "@/lib/auth/session-cookie"
+import { signOut } from "@/auth"
 
 export async function logoutAction() {
-  const cookieStore = await cookies()
-
-  for (const cookie of getClearedSessionCookies()) {
-    cookieStore.set(cookie)
-  }
+  // The caller handles navigation, so Auth.js only needs to clear the session.
+  await signOut({ redirect: false })
 
   return { ok: true as const }
 }

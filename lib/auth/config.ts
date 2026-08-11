@@ -16,7 +16,7 @@ export function createAuthApiUrl(config: AuthConfig, path: string): URL {
 
 export function getAuthConfig(): AuthConfig | null {
   const result = authConfigSchema.safeParse({
-    apiBaseUrl: process.env.API_BASE_URL ?? "http://localhost:3000/api",
+    apiBaseUrl: process.env.API_BASE_URL,
   })
 
   return result.success ? result.data : null

@@ -1,56 +1,38 @@
 import "server-only"
 
-import { cookies } from "next/headers"
 import { z } from "zod"
 
-import { createAuthApiUrl, getAuthConfig, type AuthConfig } from "@/lib/auth/config"
-import { ACCESS_TOKEN_COOKIE_NAME } from "@/lib/auth/session-cookie"
+import { adminApiRequest } from "@/lib/api/admin-api-client"
 import type { UserListItem } from "@/lib/users/schema"
 
-const instructorStatusSchema = z.object({
-  userId: z.string(),
-  status: z.string(),
+const profileStatusResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.array(
+    z.object({
+      userId: z.string(),
+      status: z.string(),
+    })
+  ),
 })
 
-const institutionStatusSchema = z.object({
-  userId: z.string(),
-  status: z.string(),
-})
+type ProfileStatus = z.infer<
+  typeof profileStatusResponseSchema
+>["data"][number]
 
 type ProfileStatusesResult =
   | { ok: true; statuses: Record<string, string> }
   | { ok: false; message: string }
 
-async function fetchProfiles<T>(
-  resource: string,
-  schema: z.ZodType<T>,
-  config: AuthConfig,
-  accessToken: string
-) {
-  try {
-    const response = await fetch(createAuthApiUrl(config, resource), {
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      cache: "no-store",
-    })
-    const body: unknown = await response.json().catch(() => null)
+async function fetchProfiles(resource: "instructors" | "institutions") {
+  const result = await adminApiRequest({
+    path: resource,
+    schema: profileStatusResponseSchema,
+    serviceName: resource,
+  })
 
-    if (!response.ok) {
-      return { ok: false as const }
-    }
-
-    const result = z
-      .object({ success: z.literal(true), data: z.array(schema) })
-      .safeParse(body)
-
-    return result.success
-      ? { ok: true as const, profiles: result.data.data }
-      : { ok: false as const }
-  } catch {
-    return { ok: false as const }
-  }
+  return result.ok
+    ? { ok: true as const, profiles: result.data.data }
+    : { ok: false as const }
 }
 
 export async function getProfileStatuses(
@@ -67,37 +49,14 @@ export async function getProfileStatuses(
     return { ok: true, statuses: {} }
   }
 
-  const cookieStore = await cookies()
-  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE_NAME)?.value
-  const config = getAuthConfig()
-
-  if (!accessToken || !config) {
-    return { ok: false, message: "Profile statuses are unavailable." }
-  }
+  const empty = Promise.resolve({
+    ok: true as const,
+    profiles: [] as ProfileStatus[],
+  })
 
   const [instructorResult, institutionResult] = await Promise.all([
-    instructors.length > 0
-      ? fetchProfiles(
-          "instructors",
-          instructorStatusSchema,
-          config,
-          accessToken
-        )
-      : Promise.resolve({
-          ok: true as const,
-          profiles: [] as z.infer<typeof instructorStatusSchema>[],
-        }),
-    institutions.length > 0
-      ? fetchProfiles(
-          "institutions",
-          institutionStatusSchema,
-          config,
-          accessToken
-        )
-      : Promise.resolve({
-          ok: true as const,
-          profiles: [] as z.infer<typeof institutionStatusSchema>[],
-        }),
+    instructors.length > 0 ? fetchProfiles("instructors") : empty,
+    institutions.length > 0 ? fetchProfiles("institutions") : empty,
   ])
 
   if (!instructorResult.ok || !institutionResult.ok) {

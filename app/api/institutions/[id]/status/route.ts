@@ -1,10 +1,8 @@
 import { revalidatePath } from "next/cache"
-import { cookies } from "next/headers"
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { createAuthApiUrl, getAuthConfig } from "@/lib/auth/config"
-import { ACCESS_TOKEN_COOKIE_NAME } from "@/lib/auth/session-cookie"
+import { adminApiRequest } from "@/lib/api/admin-api-client"
 import {
   adminProfileStatusSchema,
   profileStatusSchema,
@@ -25,10 +23,6 @@ const updateStatusResponseSchema = z.object({
     id: z.string(),
     status: profileStatusSchema,
   }),
-})
-
-const errorResponseSchema = z.object({
-  message: z.union([z.string(), z.array(z.string())]),
 })
 
 function errorResponse(message: string, status: number) {
@@ -65,61 +59,17 @@ export async function PATCH(
     return errorResponse("The institution status details are invalid.", 400)
   }
 
-  const cookieStore = await cookies()
-  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE_NAME)?.value
-  const config = getAuthConfig()
+  const result = await adminApiRequest({
+    path: `institutions/admin/${encodeURIComponent(profileId)}/status`,
+    method: "PATCH",
+    body: { status: parsed.data.status },
+    schema: updateStatusResponseSchema,
+    serviceName: "institutions",
+    fallbackMessage: "Unable to update the institution profile status.",
+  })
 
-  if (!accessToken) {
-    return errorResponse("Your session has expired. Sign in again.", 401)
-  }
-
-  if (!config) {
-    return errorResponse("The backend API URL is not configured.", 503)
-  }
-
-  let response: Response
-
-  try {
-    response = await fetch(
-      createAuthApiUrl(
-        config,
-        `institutions/admin/${encodeURIComponent(profileId)}/status`
-      ),
-      {
-        method: "PATCH",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: parsed.data.status }),
-        cache: "no-store",
-      }
-    )
-  } catch {
-    return errorResponse("The institutions service is unavailable.", 503)
-  }
-
-  const responseBody: unknown = await response.json().catch(() => null)
-
-  if (!response.ok) {
-    const error = errorResponseSchema.safeParse(responseBody)
-    const message = error.success
-      ? Array.isArray(error.data.message)
-        ? error.data.message.join(" ")
-        : error.data.message
-      : "Unable to update the institution profile status."
-
-    return errorResponse(message, response.status)
-  }
-
-  const result = updateStatusResponseSchema.safeParse(responseBody)
-
-  if (!result.success) {
-    return errorResponse(
-      "The institutions service returned an invalid response.",
-      502
-    )
+  if (!result.ok) {
+    return errorResponse(result.message, result.status)
   }
 
   revalidatePath(`/dashboard/users/${encodeURIComponent(parsed.data.userId)}`)
