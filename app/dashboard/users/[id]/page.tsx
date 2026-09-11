@@ -9,8 +9,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { DeleteUserButton } from "@/components/users/delete-user-button"
 import { InstitutionProfileCard } from "@/components/users/institution-profile-card"
 import { InstructorProfileCard } from "@/components/users/instructor-profile-card"
+import { getCurrentSession } from "@/lib/auth/session"
 import { getUser } from "@/lib/users/get-user"
 import {
   getRoleProfile,
@@ -88,7 +90,10 @@ function RoleProfileView({ result }: { result: RoleProfileResult | null }) {
 export default async function UserDetailsPage({
   params,
 }: UserDetailsPageProps) {
-  const result = await getUser((await params).id)
+  const [result, session] = await Promise.all([
+    getUser((await params).id),
+    getCurrentSession(),
+  ])
   const roleProfile: RoleProfileResult | null = result.ok
     ? await getRoleProfile(result.user)
     : null
@@ -137,6 +142,12 @@ export default async function UserDetailsPage({
                     />
                   </div>
                 </div>
+                <DeleteUserButton
+                  user={result.user}
+                  currentUserId={session?.id}
+                  redirectTo="/dashboard/users"
+                  variant="text"
+                />
               </CardContent>
             </Card>
 

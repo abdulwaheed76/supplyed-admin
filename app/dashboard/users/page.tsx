@@ -24,6 +24,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { DeleteUserButton } from "@/components/users/delete-user-button"
+import { getCurrentSession } from "@/lib/auth/session"
 import { getUsers } from "@/lib/users/get-users"
 import {
   getProfileStatuses,
@@ -91,7 +93,10 @@ function ProfileStatus({
 
 export default async function UsersPage({ searchParams }: UsersPageProps) {
   const page = getPageNumber((await searchParams).page)
-  const result = await getUsers({ page, limit: PAGE_SIZE })
+  const [result, session] = await Promise.all([
+    getUsers({ page, limit: PAGE_SIZE }),
+    getCurrentSession(),
+  ])
   const profileStatuses = result.ok
     ? await getProfileStatuses(result.users)
     : null
@@ -204,16 +209,22 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                         <TableCell className="text-muted-foreground">
                           {formatUserDate(user.createdAt)}
                         </TableCell>
-                        <TableCell className="pr-4 text-right md:pr-6">
-                          <Button asChild size="sm" variant="outline">
-                            <Link
-                              href={`/dashboard/users/${encodeURIComponent(user.id)}`}
-                              aria-label={`View details for ${getUserDisplayName(user)}`}
-                            >
-                              <EyeIcon data-icon="inline-start" />
-                              Details
-                            </Link>
-                          </Button>
+                        <TableCell className="pr-4 md:pr-6">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button asChild size="sm" variant="outline">
+                              <Link
+                                href={`/dashboard/users/${encodeURIComponent(user.id)}`}
+                                aria-label={`View details for ${getUserDisplayName(user)}`}
+                              >
+                                <EyeIcon data-icon="inline-start" />
+                                Details
+                              </Link>
+                            </Button>
+                            <DeleteUserButton
+                              user={user}
+                              currentUserId={session?.id}
+                            />
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
