@@ -3,14 +3,14 @@
 import * as React from "react"
 import Link from "next/link"
 import {
-  AlertTriangleIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   EyeIcon,
   FileTextIcon,
-  ShieldCheckIcon,
 } from "lucide-react"
 
+import { DocumentReviewDialog } from "@/components/documents/document-review-dialog"
+import { DocumentStatusBadge } from "@/components/documents/document-status-badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -29,88 +29,48 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { formatDocumentContext } from "@/lib/document-requirements/presentation"
+import { formatMimeLabel } from "@/lib/document-types/presentation"
 import {
-  DocumentReviewDialog,
-  DocumentStatusBadge,
-} from "@/components/users/instructor-documents-card"
-import {
-  getDocumentContentTypeLabel,
-  getDocumentTypeLabel,
+  formatDocumentDate,
+  formatDocumentFileSize,
+  getDocumentDisplayName,
+  getDocumentOwnerName,
+  getDocumentStatusLabel,
+  getDocumentTypeName,
 } from "@/lib/documents/presentation"
 import {
-  DOCUMENT_REVIEW_STATUSES,
-  type DocumentQueueItem,
-  type DocumentReviewStatus,
-} from "@/lib/documents/types"
+  DOCUMENT_VERIFICATION_STATUSES,
+  type DocumentRecord,
+  type DocumentsPagination,
+  type DocumentVerificationStatus,
+} from "@/lib/documents/schema"
 
 type DocumentQueueTableProps = {
-  items: DocumentQueueItem[]
-  pagination: {
-    page: number
-    total: number
-    totalPages: number
-    hasNextPage: boolean
-  }
-  unresolvedInstructorCount: number
+  documents: DocumentRecord[]
+  pagination: DocumentsPagination
 }
 
-type StatusFilter = "ALL" | DocumentReviewStatus
+type StatusFilter = "ALL" | DocumentVerificationStatus
 
-const statusLabels: Record<StatusFilter, string> = {
-  ALL: "All statuses",
-  PENDING: "Pending",
-  APPROVED: "Approved",
-  REJECTED: "Rejected",
-  REQUIRES_INFO: "Requires information",
-}
-
-function formatFileSize(bytes: number) {
-  if (bytes === 0) {
-    return "0 B"
-  }
-
-  const units = ["B", "KB", "MB", "GB"]
-  const unitIndex = Math.min(
-    Math.floor(Math.log(bytes) / Math.log(1024)),
-    units.length - 1
-  )
-
-  return `${new Intl.NumberFormat("en-GB", {
-    maximumFractionDigits: unitIndex === 0 ? 0 : 1,
-  }).format(bytes / 1024 ** unitIndex)} ${units[unitIndex]}`
-}
-
-function formatDate(value?: string | null) {
-  if (!value) {
-    return "—"
-  }
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return "—"
-  }
-
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date)
+function getStatusFilterLabel(filter: StatusFilter) {
+  return filter === "ALL" ? "All statuses" : getDocumentStatusLabel(filter)
 }
 
 export function DocumentQueueTable({
-  items,
+  documents,
   pagination,
-  unresolvedInstructorCount,
 }: DocumentQueueTableProps) {
   const filterId = React.useId()
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("ALL")
-  const filteredItems = React.useMemo(
+  // `GET /documents/admin` accepts a `status` query parameter but does not
+  // apply it yet, so this filter can only narrow the page already fetched.
+  const filteredDocuments = React.useMemo(
     () =>
       statusFilter === "ALL"
-        ? items
-        : items.filter((item) => item.document.status === statusFilter),
-    [items, statusFilter]
+        ? documents
+        : documents.filter((document) => document.status === statusFilter),
+    [documents, statusFilter]
   )
 
   return (
@@ -118,8 +78,8 @@ export function DocumentQueueTable({
       <CardHeader className="border-b">
         <CardTitle>All documents</CardTitle>
         <CardDescription>
-          Showing {filteredItems.length} of {items.length} documents on this
-          page. {pagination.total} total.
+          Showing {filteredDocuments.length} of {documents.length} documents
+          on this page. {pagination.total} total.
         </CardDescription>
         <CardAction>
           <label className="sr-only" htmlFor={filterId}>
@@ -134,51 +94,38 @@ export function DocumentQueueTable({
             className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm outline-none transition-shadow focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <option value="ALL">All statuses</option>
-            {DOCUMENT_REVIEW_STATUSES.map((status) => (
+            {DOCUMENT_VERIFICATION_STATUSES.map((status) => (
               <option key={status} value={status}>
-                {statusLabels[status]}
+                {getDocumentStatusLabel(status)}
               </option>
             ))}
           </select>
         </CardAction>
       </CardHeader>
 
-      {unresolvedInstructorCount > 0 ? (
-        <div
-          role="status"
-          className="mx-4 flex items-start gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300"
-        >
-          <AlertTriangleIcon
-            className="mt-0.5 size-4 shrink-0"
-            aria-hidden="true"
-          />
-          Instructor details for {unresolvedInstructorCount} document
-          {unresolvedInstructorCount === 1 ? "" : "s"} could not be resolved.
-        </div>
-      ) : null}
-
-      {filteredItems.length === 0 ? (
+      {filteredDocuments.length === 0 ? (
         <CardContent className="flex min-h-64 flex-col items-center justify-center text-center">
           <span className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
             <FileTextIcon className="size-5" aria-hidden="true" />
           </span>
           <h2 className="mt-3 font-medium">No documents found</h2>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-            {items.length === 0
-              ? "No instructors have uploaded documents yet."
-              : `No documents have the ${statusLabels[statusFilter].toLowerCase()} status.`}
+            {documents.length === 0
+              ? "No documents have been created yet."
+              : `No documents on this page are marked "${getStatusFilterLabel(statusFilter)}".`}
           </p>
         </CardContent>
       ) : (
         <CardContent className="px-0">
-          <Table className="min-w-[1180px]">
+          <Table className="min-w-[1280px]">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="pl-4 md:pl-6" scope="col">
-                  Instructor
+                  Owner
                 </TableHead>
                 <TableHead scope="col">Document</TableHead>
                 <TableHead scope="col">Document type</TableHead>
+                <TableHead scope="col">Context</TableHead>
                 <TableHead scope="col">File type</TableHead>
                 <TableHead scope="col">Uploaded</TableHead>
                 <TableHead scope="col">Status</TableHead>
@@ -188,80 +135,87 @@ export function DocumentQueueTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredItems.map(({ document, instructor }) => (
-                <TableRow key={document.id}>
-                  <TableCell className="pl-4 md:pl-6">
-                    {instructor.userId ? (
+              {filteredDocuments.map((document) => {
+                const version = document.currentVersion
+                const owner = document.user
+                const ownerHref = `/dashboard/users/${encodeURIComponent(document.userId)}`
+                const displayName = getDocumentDisplayName(document)
+
+                return (
+                  <TableRow key={document.id}>
+                    <TableCell className="pl-4 md:pl-6">
                       <Link
-                        href={`/dashboard/users/${encodeURIComponent(instructor.userId)}`}
+                        href={ownerHref}
                         className="font-medium underline-offset-4 hover:underline"
                       >
-                        {instructor.fullName}
+                        {getDocumentOwnerName(document)}
                       </Link>
-                    ) : (
-                      <span className="font-medium text-muted-foreground">
-                        {instructor.fullName}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="max-w-72 whitespace-normal">
-                    <p className="break-words font-medium">{document.name}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {formatFileSize(document.sizeBytes)}
-                    </p>
-                  </TableCell>
-                  <TableCell>{getDocumentTypeLabel(document.type)}</TableCell>
-                  <TableCell>
-                    {getDocumentContentTypeLabel(document.contentType)}
-                  </TableCell>
-                  <TableCell>
-                    {document.uploadedAt ? (
-                      formatDate(document.uploadedAt)
-                    ) : (
-                      <span className="text-muted-foreground">Incomplete</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="max-w-64 whitespace-normal">
-                    <DocumentStatusBadge status={document.status} />
-                    {document.reviewNotes ? (
-                      <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">
-                        {document.reviewNotes}
-                      </p>
-                    ) : null}
-                  </TableCell>
-                  <TableCell className="pr-4 md:pr-6">
-                    <div className="flex justify-end gap-2">
-                      {document.uploadedAt && instructor.userId ? (
-                        <Button asChild size="sm" variant="ghost">
-                          <Link
-                            href={`/dashboard/users/${encodeURIComponent(instructor.userId)}/documents/${encodeURIComponent(document.id)}?from=queue&queuePage=${pagination.page}`}
-                          >
+                      {owner?.name?.trim() ? (
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {owner.email}
+                        </p>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="max-w-72 whitespace-normal">
+                      {version ? (
+                        <>
+                          <p className="break-words font-medium">{displayName}</p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {formatDocumentFileSize(version.sizeBytes)} · Version{" "}
+                            {version.versionNumber}
+                          </p>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          No file uploaded
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>{getDocumentTypeName(document)}</TableCell>
+                    <TableCell>
+                      {document.requirement
+                        ? formatDocumentContext(document.requirement.context)
+                        : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {version ? formatMimeLabel(version.contentType) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {version ? (
+                        formatDocumentDate(version.createdAt)
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Awaiting upload
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <DocumentStatusBadge status={document.status} />
+                    </TableCell>
+                    <TableCell className="pr-4 md:pr-6">
+                      <div className="flex justify-end gap-2">
+                        {version ? (
+                          <Button asChild size="sm" variant="ghost">
+                            <Link
+                              href={`${ownerHref}/documents/${encodeURIComponent(document.id)}?from=queue&queuePage=${pagination.page}`}
+                            >
+                              <EyeIcon aria-hidden="true" />
+                              View
+                              <span className="sr-only"> {displayName}</span>
+                            </Link>
+                          </Button>
+                        ) : (
+                          <Button size="sm" variant="ghost" disabled>
                             <EyeIcon aria-hidden="true" />
                             View
-                            <span className="sr-only"> {document.name}</span>
-                          </Link>
-                        </Button>
-                      ) : (
-                        <Button size="sm" variant="ghost" disabled>
-                          <EyeIcon aria-hidden="true" />
-                          View
-                        </Button>
-                      )}
-                      {instructor.userId ? (
-                        <DocumentReviewDialog
-                          document={document}
-                          userId={instructor.userId}
-                        />
-                      ) : (
-                        <Button size="sm" variant="outline" disabled>
-                          <ShieldCheckIcon aria-hidden="true" />
-                          Review
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                          </Button>
+                        )}
+                        <DocumentReviewDialog document={document} />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </CardContent>

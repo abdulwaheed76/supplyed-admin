@@ -8,14 +8,21 @@ export type GetDocumentDownloadUrlResult =
   | { ok: true; downloadUrl: URL; expiresAt: string }
   | { ok: false; message: string; status: number }
 
+/**
+ * Mirrors `DownloadUrlResponseDto`. The backend also returns the version's
+ * metadata (`versionId`, `contentType`, `sizeBytes`, ...); only the presigned
+ * URL is needed here, since the content route reads the real content type
+ * from storage rather than trusting a value sent alongside the URL.
+ */
 const downloadResponseSchema = z.object({
   success: z.literal(true),
   data: z.object({
-    downloadUrl: z.url(),
+    url: z.url(),
     expiresAt: z.string(),
   }),
 })
 
+/** Presigns the document's current file version for an admin to fetch. */
 export async function getDocumentDownloadUrl(
   documentId: string
 ): Promise<GetDocumentDownloadUrlResult> {
@@ -26,7 +33,7 @@ export async function getDocumentDownloadUrl(
   }
 
   const result = await adminApiRequest({
-    path: `documents/${encodeURIComponent(normalizedDocumentId)}/download-url`,
+    path: `documents/admin/${encodeURIComponent(normalizedDocumentId)}/download-url`,
     schema: downloadResponseSchema,
     serviceName: "documents",
     fallbackMessage: "Unable to open this document.",
@@ -36,7 +43,7 @@ export async function getDocumentDownloadUrl(
     return result
   }
 
-  const downloadUrl = new URL(result.data.data.downloadUrl)
+  const downloadUrl = new URL(result.data.data.url)
   const isSecureUrl = downloadUrl.protocol === "https:"
   const isDevelopmentUrl =
     process.env.NODE_ENV !== "production" && downloadUrl.protocol === "http:"

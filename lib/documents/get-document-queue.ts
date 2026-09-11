@@ -1,53 +1,22 @@
 import "server-only"
 
-import { z } from "zod"
-
 import { adminApiRequest } from "@/lib/api/admin-api-client"
-import { instructorDocumentSchema } from "@/lib/documents/schema"
-import type { DocumentQueueItem } from "@/lib/documents/types"
-
-type DocumentQueuePagination = {
-  page: number
-  limit: number
-  total: number
-  totalPages: number
-  hasNextPage: boolean
-}
+import {
+  paginatedDocumentsResponseSchema,
+  type DocumentRecord,
+  type DocumentsPagination,
+} from "@/lib/documents/schema"
 
 export type GetDocumentQueueResult =
-  | {
-      ok: true
-      items: DocumentQueueItem[]
-      pagination: DocumentQueuePagination
-      unresolvedInstructorCount: number
-    }
+  | { ok: true; documents: DocumentRecord[]; pagination: DocumentsPagination }
   | { ok: false; message: string; status: number }
 
-const instructorsResponseSchema = z.object({
-  success: z.literal(true),
-  data: z.array(
-    z.object({
-      id: z.string(),
-      userId: z.string(),
-      fullName: z.string(),
-    })
-  ),
-})
-
-const documentsResponseSchema = z.object({
-  success: z.literal(true),
-  data: z.object({
-    documents: z.array(instructorDocumentSchema),
-    pagination: z.object({
-      page: z.number().int().positive(),
-      limit: z.number().int().positive(),
-      total: z.number().int().nonnegative(),
-      totalPages: z.number().int().nonnegative(),
-      hasNextPage: z.boolean(),
-    }),
-  }),
-})
-
+/**
+ * `GET /documents/admin` includes the owner, the requirement with its
+ * document type, and the current file version on every row, so the queue no
+ * longer needs a second request to name the uploader. Documents belong to
+ * users of any role now, not only instructors.
+ */
 export async function getDocumentQueue({
   page,
   limit,
@@ -69,55 +38,21 @@ export async function getDocumentQueue({
     }
   }
 
-  const [documents, instructors] = await Promise.all([
-    adminApiRequest({
-      path: "documents/all",
-      searchParams: { page, limit },
-      schema: documentsResponseSchema,
-      serviceName: "documents",
-      fallbackMessage: "Unable to load the document queue.",
-    }),
-    adminApiRequest({
-      path: "instructors",
-      schema: instructorsResponseSchema,
-      serviceName: "instructors",
-      fallbackMessage: "Unable to load instructors for the document queue.",
-    }),
-  ])
-
-  if (!documents.ok) {
-    return documents
-  }
-
-  if (!instructors.ok) {
-    return instructors
-  }
-
-  const instructorsById = new Map(
-    instructors.data.data.map((instructor) => [instructor.id, instructor])
-  )
-  let unresolvedInstructorCount = 0
-  const items = documents.data.data.documents.map((document) => {
-    const instructor = instructorsById.get(document.instructorId)
-
-    if (!instructor) {
-      unresolvedInstructorCount += 1
-    }
-
-    return {
-      document,
-      instructor: {
-        profileId: document.instructorId,
-        userId: instructor?.userId ?? null,
-        fullName: instructor?.fullName ?? "Unknown instructor",
-      },
-    }
+  const result = await adminApiRequest({
+    path: "documents/admin",
+    searchParams: { page, limit },
+    schema: paginatedDocumentsResponseSchema,
+    serviceName: "documents",
+    fallbackMessage: "Unable to load the document queue.",
   })
+
+  if (!result.ok) {
+    return result
+  }
 
   return {
     ok: true,
-    items,
-    pagination: documents.data.data.pagination,
-    unresolvedInstructorCount,
+    documents: result.data.data.documents,
+    pagination: result.data.data.pagination,
   }
 }

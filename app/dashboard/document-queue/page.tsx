@@ -36,7 +36,7 @@ async function DocumentQueueContent({
           Document queue
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Review every instructor document and track its verification status.
+          Review every uploaded document and track its verification status.
         </p>
       </div>
 
@@ -49,9 +49,8 @@ async function DocumentQueueContent({
         </Card>
       ) : (
         <DocumentQueueTable
-          items={result.items}
+          documents={result.documents}
           pagination={result.pagination}
-          unresolvedInstructorCount={result.unresolvedInstructorCount}
         />
       )}
     </div>

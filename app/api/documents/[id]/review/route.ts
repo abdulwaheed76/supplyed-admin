@@ -1,22 +1,15 @@
 import { revalidatePath } from "next/cache"
 import { NextResponse, type NextRequest } from "next/server"
-import { z } from "zod"
 
 import { adminApiRequest } from "@/lib/api/admin-api-client"
 import {
   documentResponseSchema,
-  documentReviewStatusSchema,
+  reviewDocumentInputSchema,
 } from "@/lib/documents/schema"
 
 type ReviewDocumentRouteContext = {
   params: Promise<{ id: string }>
 }
-
-const reviewDocumentInputSchema = z.object({
-  userId: z.string().trim().min(1).max(128),
-  status: documentReviewStatusSchema,
-  reviewNotes: z.string().trim().max(1000),
-})
 
 function errorResponse(message: string, status: number) {
   return NextResponse.json(
@@ -31,17 +24,29 @@ function isSameOrigin(request: NextRequest) {
   return !origin || origin === request.nextUrl.origin
 }
 
-export async function PATCH(
+function readId(rawId: string) {
+  const id = rawId.trim().slice(0, 128)
+
+  return id ? encodeURIComponent(id) : null
+}
+
+/**
+ * Forwards to `POST /documents/admin/:id/review`. A review is an append-only
+ * audit row on the backend, which is why this is a POST and not a PATCH on the
+ * document: the caller decides an outcome for the current file version rather
+ * than editing fields on the document.
+ */
+export async function POST(
   request: NextRequest,
   { params }: ReviewDocumentRouteContext
 ) {
   if (!isSameOrigin(request)) {
-    return errorResponse("Cross-origin review requests are not allowed.", 403)
+    return errorResponse("Cross-origin document reviews are not allowed.", 403)
   }
 
-  const documentId = (await params).id.trim()
+  const id = readId((await params).id)
 
-  if (!documentId || documentId.length > 128) {
+  if (!id) {
     return errorResponse("The document ID is invalid.", 400)
   }
 
@@ -49,30 +54,34 @@ export async function PATCH(
   const parsed = reviewDocumentInputSchema.safeParse(body)
 
   if (!parsed.success) {
-    return errorResponse("The document review details are invalid.", 400)
+    const message =
+      parsed.error.issues[0]?.message || "The document review details are invalid."
+
+    return errorResponse(message, 400)
   }
 
   const result = await adminApiRequest({
-    path: `documents/${encodeURIComponent(documentId)}/review`,
-    method: "PATCH",
-    body: {
-      status: parsed.data.status,
-      reviewNotes: parsed.data.reviewNotes,
-    },
+    path: `documents/admin/${id}/review`,
+    method: "POST",
+    body: parsed.data,
     schema: documentResponseSchema,
     serviceName: "documents",
-    fallbackMessage: "Unable to update the document status.",
+    fallbackMessage: "Unable to save the document review.",
   })
 
   if (!result.ok) {
     return errorResponse(result.message, result.status)
   }
 
-  revalidatePath(`/dashboard/users/${encodeURIComponent(parsed.data.userId)}`)
+  const document = result.data.data
+
   revalidatePath("/dashboard/document-queue")
+  revalidatePath(
+    `/dashboard/users/${encodeURIComponent(document.userId)}/documents/${id}`
+  )
 
-  const nextResponse = NextResponse.json({ document: result.data.data })
-  nextResponse.headers.set("Cache-Control", "private, no-store")
+  const response = NextResponse.json({ document })
+  response.headers.set("Cache-Control", "private, no-store")
 
-  return nextResponse
+  return response
 }

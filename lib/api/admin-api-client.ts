@@ -45,7 +45,7 @@ function summarizeBody(body: unknown) {
 }
 
 type AdminApiRequestOptions<T> = {
-  /** Path relative to `API_BASE_URL`, e.g. `documents/all`. */
+  /** Path relative to `API_BASE_URL`, e.g. `documents/admin`. */
   path: string
   /** Parsed against the full response envelope, not just its `data` field. */
   schema: z.ZodType<T>
