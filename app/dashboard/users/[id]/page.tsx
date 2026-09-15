@@ -12,6 +12,7 @@ import {
 import { DeleteUserButton } from "@/components/users/delete-user-button"
 import { InstitutionProfileCard } from "@/components/users/institution-profile-card"
 import { InstructorProfileCard } from "@/components/users/instructor-profile-card"
+import { RecruiterProfileCard } from "@/components/users/recruiter-profile-card"
 import { getCurrentSession } from "@/lib/auth/session"
 import { getUser } from "@/lib/users/get-user"
 import {
@@ -64,14 +65,17 @@ function RoleProfileView({ result }: { result: RoleProfileResult | null }) {
   }
 
   if (!result.profile) {
+    const profileTitle =
+      result.kind === "instructor"
+        ? "Instructor profile"
+        : result.kind === "institution"
+          ? "Institution profile"
+          : "Recruiter profile"
+
     return (
       <Card>
         <CardHeader>
-          <CardTitle>
-            {result.kind === "instructor"
-              ? "Instructor profile"
-              : "Institution profile"}
-          </CardTitle>
+          <CardTitle>{profileTitle}</CardTitle>
           <CardDescription>
             No matching {result.kind} profile was found for this user.
           </CardDescription>
@@ -82,8 +86,10 @@ function RoleProfileView({ result }: { result: RoleProfileResult | null }) {
 
   return result.kind === "instructor" ? (
     <InstructorProfileCard profile={result.profile} />
-  ) : (
+  ) : result.kind === "institution" ? (
     <InstitutionProfileCard profile={result.profile} />
+  ) : (
+    <RecruiterProfileCard profile={result.profile} />
   )
 }
 
@@ -267,3 +273,4 @@ export default async function UserDetailsPage({
     </div>
   )
 }
+

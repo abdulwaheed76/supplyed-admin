@@ -29,7 +29,7 @@ type InstructorStatusControlProps = {
   currentStatus: ProfileStatus
 }
 
-type ProfileKind = "instructor" | "institution"
+type ProfileKind = "instructor" | "institution" | "recruiter"
 
 type ProfileStatusControlProps = InstructorStatusControlProps & {
   profileKind: ProfileKind
@@ -56,7 +56,11 @@ async function updateProfileStatus({
   profileKind: ProfileKind
 }) {
   const resource =
-    profileKind === "instructor" ? "instructors" : "institutions"
+    profileKind === "instructor"
+      ? "instructors"
+      : profileKind === "institution"
+        ? "institutions"
+        : "recruiters"
   const response = await fetch(
     `/api/${resource}/${encodeURIComponent(profileId)}/status`,
     {
@@ -225,3 +229,8 @@ export function InstructorStatusControl(props: InstructorStatusControlProps) {
 export function InstitutionStatusControl(props: InstructorStatusControlProps) {
   return <ProfileStatusControl {...props} profileKind="institution" />
 }
+
+export function RecruiterStatusControl(props: InstructorStatusControlProps) {
+  return <ProfileStatusControl {...props} profileKind="recruiter" />
+}
+

@@ -54,12 +54,38 @@ const institutionProfileSchema = z.object({
   updatedAt: z.string().optional(),
 })
 
+const recruiterProfileSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  displayName: z.string().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
+  bio: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  county: z.string().nullable().optional(),
+  postalCode: z.string().nullable().optional(),
+  countryCode: z.string().nullable().optional(),
+  status: profileStatusSchema,
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+})
+
+const recruitersResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.union([
+    z.array(recruiterProfileSchema),
+    z.object({ recruiters: z.array(recruiterProfileSchema) }),
+  ]),
+})
+
 export type InstructorProfile = z.infer<typeof instructorProfileSchema>
 export type InstitutionProfile = z.infer<typeof institutionProfileSchema>
+export type RecruiterProfile = z.infer<typeof recruiterProfileSchema>
 
 export type RoleProfileResult =
   | { ok: true; kind: "instructor"; profile: InstructorProfile | null }
   | { ok: true; kind: "institution"; profile: InstitutionProfile | null }
+  | { ok: true; kind: "recruiter"; profile: RecruiterProfile | null }
   | { ok: true; kind: "none"; profile: null }
   | { ok: false; message: string; status: number }
 
@@ -68,23 +94,22 @@ export async function getRoleProfile(
 ): Promise<RoleProfileResult> {
   const isInstructor = user.role === "INSTRUCTOR"
   const isInstitution = user.role === "INSTITUTION"
+  const isRecruiter = user.role === "RECRUITER"
 
-  if (!isInstructor && !isInstitution) {
+  if (!isInstructor && !isInstitution && !isRecruiter) {
     return { ok: true, kind: "none", profile: null }
   }
 
-  const resource = isInstructor ? "instructors" : "institutions"
-
   if (isInstructor) {
     const result = await adminApiRequest({
-      path: resource,
+      path: "instructors",
       schema: z.object({
         success: z.literal(true),
         data: z.array(instructorProfileSchema),
       }),
-      serviceName: resource,
-      fallbackMessage: `Unable to load ${resource}.`,
-      debugLabel: `${resource}-api`,
+      serviceName: "instructors",
+      fallbackMessage: "Unable to load instructors.",
+      debugLabel: "instructors-api",
     })
 
     if (!result.ok) {
@@ -99,15 +124,36 @@ export async function getRoleProfile(
     }
   }
 
+  if (isInstitution) {
+    const result = await adminApiRequest({
+      path: "institutions",
+      schema: z.object({
+        success: z.literal(true),
+        data: z.array(institutionProfileSchema),
+      }),
+      serviceName: "institutions",
+      fallbackMessage: "Unable to load institutions.",
+      debugLabel: "institutions-api",
+    })
+
+    if (!result.ok) {
+      return result
+    }
+
+    return {
+      ok: true,
+      kind: "institution",
+      profile:
+        result.data.data.find((profile) => profile.userId === user.id) ?? null,
+    }
+  }
+
   const result = await adminApiRequest({
-    path: resource,
-    schema: z.object({
-      success: z.literal(true),
-      data: z.array(institutionProfileSchema),
-    }),
-    serviceName: resource,
-    fallbackMessage: `Unable to load ${resource}.`,
-    debugLabel: `${resource}-api`,
+    path: "recruiters",
+    schema: recruitersResponseSchema,
+    serviceName: "recruiters",
+    fallbackMessage: "Unable to load recruiters.",
+    debugLabel: "recruiters-api",
   })
 
   if (!result.ok) {
@@ -116,8 +162,12 @@ export async function getRoleProfile(
 
   return {
     ok: true,
-    kind: "institution",
+    kind: "recruiter",
     profile:
-      result.data.data.find((profile) => profile.userId === user.id) ?? null,
+      (Array.isArray(result.data.data)
+        ? result.data.data
+        : result.data.data.recruiters
+      ).find((profile) => profile.userId === user.id) ?? null,
   }
 }
+

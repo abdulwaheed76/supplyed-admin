@@ -7,6 +7,7 @@ const statusClasses: Record<JobStatus, string> = {
   ACTIVE: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
   EXPIRED: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
   CLOSED: "bg-destructive/10 text-destructive",
+  SUSPENDED: "bg-orange-500/10 text-orange-700 dark:text-orange-400",
 }
 
 export function JobStatusBadge({ status }: { status: JobStatus }) {
@@ -21,3 +22,4 @@ export function JobStatusBadge({ status }: { status: JobStatus }) {
     </span>
   )
 }
+
