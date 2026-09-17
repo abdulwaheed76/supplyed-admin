@@ -90,7 +90,7 @@ function VerificationBadge({ verified }: { verified: boolean }) {
   )
 }
 
-const filterNames = ["search", "role", "countries", "profileStatus", "emailVerified", "phoneVerified", "joined", "createdFrom", "createdTo", "sortBy", "sortOrder"] as const
+const filterNames = ["search", "role", "accountType", "countries", "profileStatus", "emailVerified", "phoneVerified", "joined", "createdFrom", "createdTo", "sortBy", "sortOrder"] as const
 
 export default async function UsersPage({ searchParams }: UsersPageProps) {
   const params = await searchParams

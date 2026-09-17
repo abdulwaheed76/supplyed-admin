@@ -1,7 +1,8 @@
 ﻿"use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ChevronDownIcon, SearchIcon, SlidersHorizontalIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -13,7 +14,25 @@ import type { UserFilters } from "@/lib/users/get-users"
 const selectClass = "h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
 
 export function UserFiltersForm({ filters }: { filters: UserFilters }) {
+  const router = useRouter()
+  const [searchInput, setSearchInput] = useState(filters.search ?? "")
   const moreFiltersRef = useRef<HTMLDetailsElement>(null)
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function searchAsYouType(value: string) {
+    if (searchTimer.current) clearTimeout(searchTimer.current)
+    searchTimer.current = setTimeout(() => {
+      searchTimer.current = null
+      const params = new URLSearchParams(window.location.search)
+      const search = value.trim()
+      if (params.get("search") === search) return
+      if (search) params.set("search", search)
+      else params.delete("search")
+      params.delete("page")
+      const query = params.toString()
+      router.replace(query ? "/dashboard/users?" + query : "/dashboard/users", { scroll: false })
+    }, 400)
+  }
 
   useEffect(() => {
     function closeOutside(event: PointerEvent) {
@@ -32,24 +51,35 @@ export function UserFiltersForm({ filters }: { filters: UserFilters }) {
     return () => {
       document.removeEventListener("pointerdown", closeOutside)
       document.removeEventListener("keydown", closeOnEscape)
+      if (searchTimer.current) clearTimeout(searchTimer.current)
     }
   }, [])
 
+  useEffect(() => {
+    if (!searchTimer.current) setSearchInput(filters.search ?? "")
+  }, [filters.search])
+
   const moreCount = [
-    filters.profileStatus, filters.joined, filters.createdFrom,
+    filters.accountType, filters.profileStatus, filters.joined, filters.createdFrom,
     filters.createdTo, filters.sortBy, filters.sortOrder,
   ].filter(Boolean).length
 
   return (
     <Card size="sm" className="overflow-visible">
       <CardContent>
-        <form key={JSON.stringify(filters)} action="/dashboard/users">
+        <form key={JSON.stringify({ ...filters, search: undefined })} action="/dashboard/users" onSubmit={() => {
+          if (searchTimer.current) clearTimeout(searchTimer.current)
+        }}>
           <div className="flex flex-wrap items-end gap-3">
             <div className="relative min-w-52 flex-1">
               <Label htmlFor="user-search" className="sr-only">Name or email</Label>
               <SearchIcon aria-hidden="true" className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-              <Input id="user-search" name="search" defaultValue={filters.search} maxLength={200}
-                placeholder="Search name or email" className="h-9 pl-9" />
+              <Input id="user-search" name="search" value={searchInput} maxLength={200}
+                placeholder="Search name or email" className="h-9 pl-9"
+                onChange={(event) => {
+                  setSearchInput(event.target.value)
+                  searchAsYouType(event.target.value)
+                }} />
             </div>
             <div className="min-w-32 flex-1 sm:max-w-40">
               <Label htmlFor="user-role" className="mb-1 block text-xs">Role</Label>
@@ -85,6 +115,14 @@ export function UserFiltersForm({ filters }: { filters: UserFilters }) {
               </summary>
               <div className="absolute right-0 top-full z-30 mt-2 w-[min(90vw,30rem)] rounded-xl border bg-popover p-4 shadow-xl">
                 <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-1.5 sm:col-span-2">
+                    <Label htmlFor="account-type">Account type</Label>
+                    <select id="account-type" name="accountType" defaultValue={filters.accountType ?? ""} className={selectClass}>
+                      <option value="">All accounts</option>
+                      <option value="ADMIN">Admin</option>
+                      <option value="USERS">Users (all other roles)</option>
+                    </select>
+                  </div>
                   <div className="grid gap-1.5 sm:col-span-2">
                     <Label htmlFor="user-status">Profile status</Label>
                     <select id="user-status" name="profileStatus" defaultValue={filters.profileStatus ?? ""} className={selectClass}>

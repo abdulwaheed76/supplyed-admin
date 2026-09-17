@@ -61,6 +61,7 @@ export type GetUsersOptions = {
   limit: number
   search?: string
   role?: string
+  accountType?: string
   countries?: string
   profileStatus?: string
   emailVerified?: string

@@ -182,9 +182,11 @@ function RoleProfileView({ result }: { result: RoleProfileResult | null }) {
 function ProfileTab({
   roleProfile,
   user,
+  currentUserId,
 }: {
   roleProfile: RoleProfileResult | null
   user: UserListItem
+  currentUserId?: string
 }) {
   const countryCode =
     roleProfile?.ok && roleProfile.kind !== "none"
@@ -203,7 +205,7 @@ function ProfileTab({
               Account and contact information for this user.
             </CardDescription>
             <CardAction>
-              <UserAccountEditDialog user={user} />
+              <UserAccountEditDialog user={user} currentUserId={currentUserId} />
             </CardAction>
           </CardHeader>
           <CardContent>
@@ -433,7 +435,7 @@ export default async function UserDetailsPage({
           {activeTab === "documents" ? (
             <DocumentsTab result={documentsResult} userId={result.user.id} />
           ) : (
-            <ProfileTab roleProfile={roleProfile} user={result.user} />
+            <ProfileTab roleProfile={roleProfile} user={result.user} currentUserId={session?.id} />
           )}
         </>
       )}

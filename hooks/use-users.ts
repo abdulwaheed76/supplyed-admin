@@ -3,7 +3,7 @@
 import { useMutation } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 
-import { createUser, deleteUser, updateUser } from "@/lib/api/user-api"
+import { createUser, deleteUser, disableUserTwoFactor, updateUser } from "@/lib/api/user-api"
 
 export function useCreateUser() {
   const router = useRouter()
@@ -36,5 +36,12 @@ export function useUpdateUser() {
     onSuccess: () => {
       router.refresh()
     },
+  })
+}
+export function useDisableUserTwoFactor() {
+  const router = useRouter()
+  return useMutation({
+    mutationFn: disableUserTwoFactor,
+    onSuccess: () => router.refresh(),
   })
 }

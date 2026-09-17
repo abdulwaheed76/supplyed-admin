@@ -59,3 +59,9 @@ export async function updateUser({
 
   return result.user
 }
+export async function disableUserTwoFactor(id: string): Promise<void> {
+  await routeRequest('/api/users/' + encodeURIComponent(id.slice(0, 128)) + '/two-factor/disable', {
+    method: 'POST',
+    fallbackMessage: 'Unable to disable two-factor authentication.',
+  })
+}

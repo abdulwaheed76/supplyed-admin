@@ -64,7 +64,7 @@ async function JobDetailsContent({ params, searchParams }: JobDetailsPageProps) 
   const fromPage = getPageNumber(query.fromPage)
   const statusFilter = getStatusFilter(query.status)
   const jobsUrl = getJobsHref(fromPage, statusFilter)
-  const result = await getJob(id)
+  const result = await getJob(id, fromPage)
   const poster = result.ok ? await getUser(result.job.postedByUserId) : null
 
   return (
