@@ -26,6 +26,13 @@ export function formatUserDate(value?: string | null) {
   }).format(date)
 }
 
+export function formatUserDateTime(value?: string | null) {
+  if (!value) return "Not recorded"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "Not recorded"
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(date) + " UTC"
+}
+
 export function getUserDisplayName(user: UserListItem) {
   return user.name?.trim() || "Unnamed user"
 }

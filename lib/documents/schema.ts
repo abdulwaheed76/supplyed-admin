@@ -81,6 +81,13 @@ export const documentSchema = z.object({
   applicationId: z.string().nullable().optional(),
   requirementId: z.string(),
   status: documentVerificationStatusSchema,
+  fileKey: z.string().nullable().optional(),
+  originalName: z.string().nullable().optional(),
+  sizeBytes: z.number().int().nonnegative().nullable().optional(),
+  contentType: z.string().nullable().optional(),
+  checksum: z.string().nullable().optional(),
+  documentExpiryDate: z.string().nullable().optional(),
+  uploadedAt: z.string().nullable().optional(),
   currentVersionId: z.string().nullable().optional(),
   currentVersion: documentFileVersionSchema.nullable().optional(),
   requirement: documentRequirementSchema

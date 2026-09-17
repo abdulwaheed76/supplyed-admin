@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { LoaderCircleIcon, PlusIcon, Trash2Icon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -13,6 +14,7 @@ import {
   DOCUMENT_CONTEXTS,
   type DocumentContext,
   type DocumentRequirement,
+  type UpdateDocumentRequirementInput,
 } from "@/lib/document-requirements/schema"
 
 type DocumentRequirementsPanelProps = {
@@ -27,6 +29,20 @@ const REQUIREMENT_TOGGLES = [
   { field: "isActive", label: "Active" },
 ] as const
 
+type RequirementToggleField = (typeof REQUIREMENT_TOGGLES)[number]["field"]
+
+function updateKey(id: string, field: RequirementToggleField) {
+  return `update:${id}:${field}`
+}
+
+function deleteKey(id: string) {
+  return `delete:${id}`
+}
+
+function createKey(context: DocumentContext) {
+  return `create:${context}`
+}
+
 export function DocumentRequirementsPanel({
   documentTypeId,
   requirements,
@@ -34,14 +50,9 @@ export function DocumentRequirementsPanel({
   const createRequirement = useCreateDocumentRequirement()
   const updateRequirement = useUpdateDocumentRequirement()
   const deleteRequirement = useDeleteDocumentRequirement()
-
-  // One busy flag for the whole panel: every mutation ends in `router.refresh()`,
-  // which re-renders this list, so letting a second edit start mid-refresh would
-  // act on rows that are about to be replaced.
-  const isPending =
-    createRequirement.isPending ||
-    updateRequirement.isPending ||
-    deleteRequirement.isPending
+  const [pendingKeys, setPendingKeys] = React.useState<Set<string>>(
+    () => new Set()
+  )
 
   const error =
     createRequirement.error ?? updateRequirement.error ?? deleteRequirement.error
@@ -57,10 +68,50 @@ export function DocumentRequirementsPanel({
     (context) => !linkedContexts.has(context)
   )
 
+  function setPending(key: string, pending: boolean) {
+    setPendingKeys((current) => {
+      const next = new Set(current)
+
+      if (pending) {
+        next.add(key)
+      } else {
+        next.delete(key)
+      }
+
+      return next
+    })
+  }
+
   function handleAdd(context: DocumentContext) {
-    // Only the identity is sent: the columns default to required, not
-    // reviewed, and active — and the row's toggles are right there to change.
-    createRequirement.mutate({ documentTypeId, context })
+    const key = createKey(context)
+
+    setPending(key, true)
+    createRequirement.mutate(
+      { documentTypeId, context },
+      { onSettled: () => setPending(key, false) }
+    )
+  }
+
+  function handleUpdate(
+    id: string,
+    field: RequirementToggleField,
+    checked: boolean
+  ) {
+    const key = updateKey(id, field)
+    const input: UpdateDocumentRequirementInput = { [field]: checked }
+
+    setPending(key, true)
+    updateRequirement.mutate(
+      { id, input },
+      { onSettled: () => setPending(key, false) }
+    )
+  }
+
+  function handleDelete(id: string) {
+    const key = deleteKey(id)
+
+    setPending(key, true)
+    deleteRequirement.mutate(id, { onSettled: () => setPending(key, false) })
   }
 
   return (
@@ -72,51 +123,66 @@ export function DocumentRequirementsPanel({
         </p>
       ) : (
         <ul className="flex flex-col gap-3">
-          {rows.map((requirement) => (
-            <li
-              key={requirement.id}
-              className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-lg border p-3"
-            >
-              <div className="min-w-40 flex-1 font-medium">
-                {formatDocumentContext(requirement.context)}
-              </div>
+          {rows.map((requirement) => {
+            const rowDeleteKey = deleteKey(requirement.id)
+            const isDeleting = pendingKeys.has(rowDeleteKey)
 
-              {REQUIREMENT_TOGGLES.map(({ field, label }) => (
-                <label
-                  key={field}
-                  className="flex items-center gap-2 text-sm has-[:disabled]:opacity-50"
-                >
-                  <input
-                    type="checkbox"
-                    checked={requirement[field]}
-                    disabled={isPending}
-                    onChange={(event) =>
-                      updateRequirement.mutate({
-                        id: requirement.id,
-                        input: { [field]: event.target.checked },
-                      })
-                    }
-                    className="size-4 shrink-0 rounded border-input accent-primary"
-                  />
-                  <span>{label}</span>
-                </label>
-              ))}
-
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                disabled={isPending}
-                onClick={() => deleteRequirement.mutate(requirement.id)}
-                className="text-muted-foreground hover:text-destructive"
+            return (
+              <li
+                key={requirement.id}
+                className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-lg border p-3"
               >
-                <Trash2Icon aria-hidden="true" />
-                <span className="sr-only">
-                  Remove {formatDocumentContext(requirement.context)}
-                </span>
-              </Button>
-            </li>
-          ))}
+                <div className="min-w-40 flex-1 font-medium">
+                  {formatDocumentContext(requirement.context)}
+                </div>
+
+                {REQUIREMENT_TOGGLES.map(({ field, label }) => {
+                  const key = updateKey(requirement.id, field)
+                  const isUpdating = pendingKeys.has(key)
+
+                  return (
+                    <label
+                      key={field}
+                      className="flex items-center gap-2 text-sm has-[:disabled]:opacity-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={requirement[field]}
+                        disabled={isUpdating || isDeleting}
+                        onChange={(event) =>
+                          handleUpdate(
+                            requirement.id,
+                            field,
+                            event.target.checked
+                          )
+                        }
+                        className="size-4 shrink-0 rounded border-input accent-primary"
+                      />
+                      <span>{label}</span>
+                    </label>
+                  )
+                })}
+
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  disabled={isDeleting}
+                  onClick={() => handleDelete(requirement.id)}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  {isDeleting ? (
+                    <LoaderCircleIcon className="animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Trash2Icon aria-hidden="true" />
+                  )}
+                  <span className="sr-only">
+                    Remove {formatDocumentContext(requirement.context)}
+                  </span>
+                </Button>
+              </li>
+            )
+          })}
         </ul>
       )}
 
@@ -129,23 +195,28 @@ export function DocumentRequirementsPanel({
       {availableContexts.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2 border-t pt-4">
           <span className="text-sm text-muted-foreground">Add a context:</span>
-          {availableContexts.map((context) => (
-            <Button
-              key={context}
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={isPending}
-              onClick={() => handleAdd(context)}
-            >
-              {isPending ? (
-                <LoaderCircleIcon className="animate-spin" aria-hidden="true" />
-              ) : (
-                <PlusIcon data-icon="inline-start" />
-              )}
-              {formatDocumentContext(context)}
-            </Button>
-          ))}
+          {availableContexts.map((context) => {
+            const key = createKey(context)
+            const isCreating = pendingKeys.has(key)
+
+            return (
+              <Button
+                key={context}
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={isCreating}
+                onClick={() => handleAdd(context)}
+              >
+                {isCreating ? (
+                  <LoaderCircleIcon className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <PlusIcon data-icon="inline-start" />
+                )}
+                {formatDocumentContext(context)}
+              </Button>
+            )
+          })}
         </div>
       ) : null}
     </div>

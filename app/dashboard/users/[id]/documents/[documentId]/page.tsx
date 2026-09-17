@@ -12,13 +12,19 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { formatDocumentContext } from "@/lib/document-requirements/presentation"
+import {
+  getDocumentReviews,
+  getLatestDocumentReviewComment,
+} from "@/lib/document-reviews/get-document-reviews"
 import { formatMimeLabel } from "@/lib/document-types/presentation"
 import { getDocument } from "@/lib/documents/get-document"
 import {
   formatDocumentDate,
   formatDocumentFileSize,
+  getDocumentCurrentFile,
   getDocumentDisplayName,
   getDocumentOwnerName,
+  getDocumentStatusLabel,
   getDocumentTypeName,
 } from "@/lib/documents/presentation"
 import { isPreviewableDocumentContentType } from "@/lib/documents/preview"
@@ -79,15 +85,23 @@ export default async function DocumentViewerPage({
   const { id: userId, documentId } = await params
   const resolvedSearchParams = await searchParams
   const from = resolvedSearchParams.from
-  const fromQueue = (Array.isArray(from) ? from[0] : from) === "queue"
+  const fromValue = Array.isArray(from) ? from[0] : from
+  const fromQueue = fromValue === "queue"
+  const fromUserDocuments = fromValue === "user-documents"
   const queuePageValue = Array.isArray(resolvedSearchParams.queuePage)
     ? resolvedSearchParams.queuePage[0]
     : resolvedSearchParams.queuePage
   const queuePage = Number(queuePageValue)
   const backHref = fromQueue
     ? `/dashboard/document-queue${Number.isInteger(queuePage) && queuePage > 1 ? `?page=${queuePage}` : ""}`
-    : `/dashboard/users/${encodeURIComponent(userId)}`
-  const backLabel = fromQueue ? "Back to document queue" : "Back to user"
+    : fromUserDocuments
+      ? `/dashboard/users/${encodeURIComponent(userId)}?tab=documents`
+      : `/dashboard/users/${encodeURIComponent(userId)}`
+  const backLabel = fromQueue
+    ? "Back to document queue"
+    : fromUserDocuments
+      ? "Back to documents"
+      : "Back to user"
   const result = await getDocument(documentId)
 
   if (!result.ok) {
@@ -117,11 +131,15 @@ export default async function DocumentViewerPage({
     )
   }
 
-  const version = document.currentVersion
+  const version = getDocumentCurrentFile(document)
   const displayName = getDocumentDisplayName(document)
   const canPreview = version
     ? isPreviewableDocumentContentType(version.contentType)
     : false
+  const reviewsResult = await getDocumentReviews(document.id)
+  const reviewComment = reviewsResult.ok
+    ? getLatestDocumentReviewComment(reviewsResult.reviews)
+    : null
 
   return (
     <ViewerLayout backHref={backHref} backLabel={backLabel}>
@@ -177,7 +195,7 @@ export default async function DocumentViewerPage({
             <iframe
               src={`/api/documents/${encodeURIComponent(document.id)}/content`}
               title={`Preview of ${displayName}`}
-              className="h-[calc(100vh-14rem)] min-h-[34rem] w-full border-0 bg-muted/40"
+              className="h-[70vh] min-h-[24rem] w-full border-0 bg-muted/40 md:h-[calc(100vh-14rem)] md:min-h-[34rem]"
               referrerPolicy="no-referrer"
             />
           ) : (
@@ -195,6 +213,25 @@ export default async function DocumentViewerPage({
           )}
         </CardContent>
       </Card>
+
+      {reviewComment ? (
+        <Card>
+          <CardHeader className="border-b">
+            <CardTitle>Review comment</CardTitle>
+            <CardDescription>
+              {getDocumentStatusLabel(reviewComment.toStatus)}
+              {reviewComment.createdAt
+                ? ` - ${formatDocumentDate(reviewComment.createdAt)}`
+                : ""}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+              {reviewComment.notes}
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
     </ViewerLayout>
   )
 }

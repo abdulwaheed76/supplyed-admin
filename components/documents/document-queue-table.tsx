@@ -34,6 +34,7 @@ import { formatMimeLabel } from "@/lib/document-types/presentation"
 import {
   formatDocumentDate,
   formatDocumentFileSize,
+  getDocumentCurrentFile,
   getDocumentDisplayName,
   getDocumentOwnerName,
   getDocumentStatusLabel,
@@ -136,7 +137,7 @@ export function DocumentQueueTable({
             </TableHeader>
             <TableBody>
               {filteredDocuments.map((document) => {
-                const version = document.currentVersion
+                const version = getDocumentCurrentFile(document)
                 const owner = document.user
                 const ownerHref = `/dashboard/users/${encodeURIComponent(document.userId)}`
                 const displayName = getDocumentDisplayName(document)

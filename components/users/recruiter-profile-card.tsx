@@ -80,12 +80,6 @@ export function RecruiterProfileCard({ profile }: RecruiterProfileCardProps) {
           </div>
           <div className="sm:col-span-2">
             <dt className="text-xs font-medium text-muted-foreground">
-              Profile ID
-            </dt>
-            <dd className="mt-1 break-all font-mono text-xs">{profile.id}</dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-xs font-medium text-muted-foreground">
               Address
             </dt>
             <dd className="mt-1">{address || "—"}</dd>
