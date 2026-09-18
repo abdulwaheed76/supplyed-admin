@@ -1,0 +1,1 @@
+sample.doc is the MIT-licensed test01.doc fixture from https://github.com/morungos/node-word-extractor/tree/develop/__tests__/data (see word-extractor-LICENSE.txt). sample.docx is a synthetic SupplyED preview/security test fixture.

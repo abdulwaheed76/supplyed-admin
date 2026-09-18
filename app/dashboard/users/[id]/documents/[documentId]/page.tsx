@@ -1,6 +1,11 @@
 import type { ReactNode } from "react"
 import Link from "next/link"
-import { ArrowLeftIcon, EyeOffIcon, FileTextIcon } from "lucide-react"
+import {
+  ArrowLeftIcon,
+  DownloadIcon,
+  EyeOffIcon,
+  FileTextIcon,
+} from "lucide-react"
 
 import { DocumentStatusBadge } from "@/components/documents/document-status-badge"
 import { Button } from "@/components/ui/button"
@@ -168,7 +173,9 @@ export default async function DocumentViewerPage({
                     </span>
                     <span>{formatDocumentFileSize(version.sizeBytes)}</span>
                     <span>Version {version.versionNumber}</span>
-                    <span>Uploaded {formatDocumentDate(version.createdAt)}</span>
+                    <span>
+                      Uploaded {formatDocumentDate(version.createdAt)}
+                    </span>
                     {version.documentExpiryDate ? (
                       <span>
                         Expires {formatDocumentDate(version.documentExpiryDate)}
@@ -190,6 +197,19 @@ export default async function DocumentViewerPage({
           </div>
         </CardHeader>
 
+        {version ? (
+          <div className="flex justify-end px-6">
+            <Button asChild size="sm" variant="outline">
+              <a
+                href={`/api/documents/${encodeURIComponent(document.id)}/content?download=1`}
+                download
+              >
+                <DownloadIcon aria-hidden="true" />
+                Download original
+              </a>
+            </Button>
+          </div>
+        ) : null}
         <CardContent className="min-h-0 flex-1 p-0">
           {canPreview ? (
             <iframe
@@ -203,10 +223,12 @@ export default async function DocumentViewerPage({
               <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
                 <EyeOffIcon className="size-5" aria-hidden="true" />
               </span>
-              <h1 className="mt-4 text-lg font-semibold">Preview unavailable</h1>
+              <h1 className="mt-4 text-lg font-semibold">
+                Preview unavailable
+              </h1>
               <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
                 {version
-                  ? "This file format cannot be safely displayed in the browser. PDF, JPEG, and PNG files are supported."
+                  ? "Download this file to view it in its original application. Inline previews support DOC, DOCX, PDF, JPEG, PNG, GIF, and WebP."
                   : "No file has been uploaded for this document yet."}
               </p>
             </div>

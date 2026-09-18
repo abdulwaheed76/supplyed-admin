@@ -5,26 +5,29 @@ import { z } from "zod"
 import { adminApiRequest } from "@/lib/api/admin-api-client"
 
 export type GetDocumentDownloadUrlResult =
-  | { ok: true; downloadUrl: URL; expiresAt: string }
+  | {
+      ok: true
+      downloadUrl: URL
+      expiresAt: string
+      contentType?: string
+      originalName?: string | null
+    }
   | { ok: false; message: string; status: number }
 
-/**
- * Mirrors `DownloadUrlResponseDto`. The backend also returns the version's
- * metadata (`versionId`, `contentType`, `sizeBytes`, ...); only the presigned
- * URL is needed here, since the content route reads the real content type
- * from storage rather than trusting a value sent alongside the URL.
- */
+/** File metadata is used only when storage returns a generic binary content type. */
 const downloadResponseSchema = z.object({
   success: z.literal(true),
   data: z.object({
     url: z.url(),
     expiresAt: z.string(),
+    contentType: z.string().optional(),
+    originalName: z.string().nullable().optional(),
   }),
 })
 
 /** Presigns the document's current file version for an admin to fetch. */
 export async function getDocumentDownloadUrl(
-  documentId: string
+  documentId: string,
 ): Promise<GetDocumentDownloadUrlResult> {
   const normalizedDocumentId = documentId.trim()
 
@@ -60,5 +63,7 @@ export async function getDocumentDownloadUrl(
     ok: true,
     downloadUrl,
     expiresAt: result.data.data.expiresAt,
+    contentType: result.data.data.contentType,
+    originalName: result.data.data.originalName,
   }
 }
