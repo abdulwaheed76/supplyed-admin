@@ -56,10 +56,24 @@ type GetUsersResult =
     }
   | { ok: false; message: string; status: number }
 
-type GetUsersOptions = {
+export type GetUsersOptions = {
   page: number
   limit: number
+  search?: string
+  role?: string
+  accountType?: string
+  countries?: string
+  profileStatus?: string
+  emailVerified?: string
+  phoneVerified?: string
+  createdFrom?: string
+  createdTo?: string
+  joined?: string
+  sortBy?: string
+  sortOrder?: string
 }
+
+export type UserFilters = Omit<GetUsersOptions, "page" | "limit">
 
 function readPagination(
   value: unknown,
@@ -89,13 +103,11 @@ function readPagination(
   return { page, limit, total, totalPages, hasNextPage }
 }
 
-export async function getUsers({
-  page,
-  limit,
-}: GetUsersOptions): Promise<GetUsersResult> {
+export async function getUsers(options: GetUsersOptions): Promise<GetUsersResult> {
+  const { page, limit } = options
   const result = await adminApiRequest({
     path: "users",
-    searchParams: { page, limit },
+    searchParams: options,
     schema: usersResponseSchema,
     serviceName: "users",
     fallbackMessage: "Unable to load users.",
@@ -103,6 +115,9 @@ export async function getUsers({
   })
 
   if (!result.ok) {
+    if (result.status === 400 && /property .* should not exist/i.test(result.message)) {
+      return { ...result, message: "This backend server is running an older build without the selected user filters. Restart it and try again." }
+    }
     return result
   }
 

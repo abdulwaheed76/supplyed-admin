@@ -1,4 +1,5 @@
 import type {
+  DocumentFileVersion,
   DocumentRecord,
   DocumentVerificationStatus,
 } from "@/lib/documents/schema"
@@ -19,12 +20,36 @@ export function getDocumentTypeName(document: DocumentRecord) {
   return document.requirement?.documentType.name ?? "Unknown document type"
 }
 
+export function getDocumentCurrentFile(
+  document: DocumentRecord
+): DocumentFileVersion | null {
+  if (document.currentVersion) {
+    return document.currentVersion
+  }
+
+  if (!document.fileKey || !document.contentType || document.sizeBytes == null) {
+    return null
+  }
+
+  return {
+    id: document.currentVersionId ?? document.id,
+    documentId: document.id,
+    versionNumber: 1,
+    fileKey: document.fileKey,
+    originalName: document.originalName,
+    sizeBytes: document.sizeBytes,
+    contentType: document.contentType,
+    checksum: document.checksum,
+    documentExpiryDate: document.documentExpiryDate,
+    createdAt: document.uploadedAt ?? document.updatedAt ?? document.createdAt,
+  }
+}
+
 /** The uploaded file's own name, falling back to the document type. */
 export function getDocumentDisplayName(document: DocumentRecord) {
-  return (
-    document.currentVersion?.originalName?.trim() ||
-    getDocumentTypeName(document)
-  )
+  const file = getDocumentCurrentFile(document)
+
+  return file?.originalName?.trim() || getDocumentTypeName(document)
 }
 
 export function getDocumentOwnerName(document: DocumentRecord) {

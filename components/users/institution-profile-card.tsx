@@ -106,9 +106,11 @@ export function InstitutionProfileCard({
           </div>
           <div>
             <dt className="text-xs font-medium text-muted-foreground">
-              Profile ID
+              Country
             </dt>
-            <dd className="mt-1 break-all font-mono text-xs">{profile.id}</dd>
+            <dd className="mt-1 font-medium">
+              {profile.countryCode || "Not provided"}
+            </dd>
           </div>
           <div className="sm:col-span-2 xl:col-span-4">
             <dt className="text-xs font-medium text-muted-foreground">

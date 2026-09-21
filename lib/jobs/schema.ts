@@ -1,6 +1,12 @@
 import { z } from "zod"
 
-export const JOB_STATUSES = ["DRAFT", "ACTIVE", "EXPIRED", "CLOSED"] as const
+export const JOB_STATUSES = [
+  "DRAFT",
+  "ACTIVE",
+  "EXPIRED",
+  "CLOSED",
+  "SUSPENDED",
+] as const
 
 export const jobStatusSchema = z.enum(JOB_STATUSES)
 
@@ -70,3 +76,4 @@ export const createJobInputSchema = z
 export type Job = z.infer<typeof jobSchema>
 export type JobStatus = z.infer<typeof jobStatusSchema>
 export type CreateJobInput = z.infer<typeof createJobInputSchema>
+

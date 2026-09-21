@@ -4,6 +4,7 @@ import { ArrowLeftIcon, ExternalLinkIcon } from "lucide-react"
 
 import { JobDetailsSkeleton } from "@/components/jobs/jobs-skeleton"
 import { JobStatusBadge } from "@/components/jobs/job-status-badge"
+import type { JobStatusFilter } from "@/components/jobs/jobs-table"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -19,8 +20,13 @@ import { formatUserRole, getUserDisplayName } from "@/lib/users/presentation"
 
 type JobDetailsPageProps = {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ fromPage?: string | string[] }>
+  searchParams: Promise<{
+    fromPage?: string | string[]
+    status?: string | string[]
+  }>
 }
+
+const jobStatusFilters: JobStatusFilter[] = ["DRAFT", "EXPIRED", "ACTIVE"]
 
 function getPageNumber(value: string | string[] | undefined) {
   const candidate = Array.isArray(value) ? value[0] : value
@@ -29,11 +35,36 @@ function getPageNumber(value: string | string[] | undefined) {
   return Number.isInteger(page) && page > 0 ? page : 1
 }
 
+function getStatusFilter(value: string | string[] | undefined): JobStatusFilter {
+  const candidate = Array.isArray(value) ? value[0] : value
+
+  return jobStatusFilters.includes(candidate as JobStatusFilter)
+    ? (candidate as JobStatusFilter)
+    : "ALL"
+}
+
+function getJobsHref(page: number, statusFilter: JobStatusFilter) {
+  const params = new URLSearchParams()
+
+  if (page > 1) {
+    params.set("page", String(page))
+  }
+
+  if (statusFilter !== "ALL") {
+    params.set("status", statusFilter)
+  }
+
+  const query = params.toString()
+
+  return query ? `/dashboard/jobs?${query}` : "/dashboard/jobs"
+}
+
 async function JobDetailsContent({ params, searchParams }: JobDetailsPageProps) {
   const [{ id }, query] = await Promise.all([params, searchParams])
   const fromPage = getPageNumber(query.fromPage)
-  const jobsUrl = fromPage > 1 ? `/dashboard/jobs?page=${fromPage}` : "/dashboard/jobs"
-  const result = await getJob(id)
+  const statusFilter = getStatusFilter(query.status)
+  const jobsUrl = getJobsHref(fromPage, statusFilter)
+  const result = await getJob(id, fromPage)
   const poster = result.ok ? await getUser(result.job.postedByUserId) : null
 
   return (
@@ -228,3 +259,4 @@ export default function JobDetailsPage(props: JobDetailsPageProps) {
     </Suspense>
   )
 }
+

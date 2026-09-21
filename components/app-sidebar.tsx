@@ -23,7 +23,6 @@ import {
   BoxesIcon,
   BriefcaseBusinessIcon,
   ChevronRightIcon,
-  FileCheck2Icon,
   FileTypeIcon,
   LayoutGridIcon,
   LayoutDashboardIcon,
@@ -42,11 +41,6 @@ const navigation = [
     title: "User management",
     url: "/dashboard/users",
     Icon: UsersIcon,
-  },
-  {
-    title: "Document queue",
-    url: "/dashboard/document-queue",
-    Icon: FileCheck2Icon,
   },
   {
     title: "Document types",

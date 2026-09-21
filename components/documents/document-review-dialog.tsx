@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useReviewDocument } from "@/hooks/use-documents"
 import {
+  getDocumentCurrentFile,
   getDocumentDisplayName,
   getDocumentStatusLabel,
 } from "@/lib/documents/presentation"
@@ -45,6 +46,7 @@ export function DocumentReviewDialog({ document }: DocumentReviewDialogProps) {
   const isPending = reviewDocument.isPending
   const notesRequired = decision === "REJECTED" || decision === "REQUIRES_INFO"
   const displayName = getDocumentDisplayName(document)
+  const currentFile = getDocumentCurrentFile(document)
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
@@ -79,7 +81,7 @@ export function DocumentReviewDialog({ document }: DocumentReviewDialogProps) {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {/* A document with no file has nothing to review yet. */}
-        <Button size="sm" variant="outline" disabled={!document.currentVersion}>
+        <Button size="sm" variant="outline" disabled={!currentFile}>
           <ShieldCheckIcon aria-hidden="true" />
           Review
           <span className="sr-only"> {displayName}</span>

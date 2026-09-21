@@ -76,6 +76,7 @@ export async function POST(
   const document = result.data.data
 
   revalidatePath("/dashboard/document-queue")
+  revalidatePath(`/dashboard/users/${encodeURIComponent(document.userId)}`)
   revalidatePath(
     `/dashboard/users/${encodeURIComponent(document.userId)}/documents/${id}`
   )

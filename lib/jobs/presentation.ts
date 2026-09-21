@@ -5,6 +5,7 @@ const statusLabels: Record<JobStatus, string> = {
   ACTIVE: "Active",
   EXPIRED: "Expired",
   CLOSED: "Closed",
+  SUSPENDED: "Suspended",
 }
 
 export function getJobStatusLabel(status: JobStatus) {
@@ -59,3 +60,4 @@ export function formatJobPay(
 
   return `${formattedAmount}${suffix}`
 }
+
