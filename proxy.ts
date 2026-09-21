@@ -21,5 +21,6 @@ export const config = {
     "/api/institutions/:path*",
     "/api/instructors/:path*",
     "/api/jobs/:path*",
+    "/api/users/:path*",
   ],
 }

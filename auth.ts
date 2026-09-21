@@ -6,6 +6,8 @@ import { NextResponse } from "next/server"
 
 import { authenticateAdmin } from "@/lib/auth/authenticate"
 import {
+  CALLBACK_URL_COOKIE_NAME,
+  CSRF_COOKIE_NAME,
   SESSION_COOKIE_NAME,
   USE_SECURE_AUTH_COOKIES,
 } from "@/lib/auth/cookies"
@@ -122,6 +124,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   cookies: {
     sessionToken: {
       name: SESSION_COOKIE_NAME,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: USE_SECURE_AUTH_COOKIES,
+      },
+    },
+    // Renamed for the same reason as the session cookie (see
+    // lib/auth/cookies.ts). Under the default names the frontend could
+    // overwrite this app's CSRF cookie between the login form loading and
+    // being submitted, failing the sign-in with a CSRF mismatch.
+    csrfToken: {
+      name: CSRF_COOKIE_NAME,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: USE_SECURE_AUTH_COOKIES,
+      },
+    },
+    callbackUrl: {
+      name: CALLBACK_URL_COOKIE_NAME,
       options: {
         httpOnly: true,
         sameSite: "lax",
