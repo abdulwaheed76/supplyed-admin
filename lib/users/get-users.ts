@@ -3,6 +3,8 @@ import "server-only"
 import { z } from "zod"
 
 import { adminApiRequest } from "@/lib/api/admin-api-client"
+import { getRoleProfile, withRoleProfileName } from "@/lib/users/get-role-profile"
+import { getUserProvidedName } from "@/lib/users/presentation"
 import { userSchema, type UserListItem } from "@/lib/users/schema"
 
 const paginationSchema = z
@@ -75,6 +77,19 @@ export type GetUsersOptions = {
 
 export type UserFilters = Omit<GetUsersOptions, "page" | "limit">
 
+async function resolveUserNames(users: UserListItem[]) {
+  // The users API omits profile names; look them up only when the account has no name.
+  const resolved: UserListItem[] = []
+  for (let offset = 0; offset < users.length; offset += 4) {
+    const batch = await Promise.all(users.slice(offset, offset + 4).map(async (user) => {
+      if (getUserProvidedName(user)) return user
+      return withRoleProfileName(user, await getRoleProfile(user))
+    }))
+    resolved.push(...batch)
+  }
+  return resolved
+}
+
 function readPagination(
   value: unknown,
   fallback: GetUsersOptions,
@@ -126,7 +141,7 @@ export async function getUsers(options: GetUsersOptions): Promise<GetUsersResult
   if (list.success) {
     return {
       ok: true,
-      users: list.data,
+      users: await resolveUserNames(list.data),
       pagination: readPagination(
         result.data.meta,
         { page, limit },
@@ -150,7 +165,7 @@ export async function getUsers(options: GetUsersOptions): Promise<GetUsersResult
 
   return {
     ok: true,
-    users,
+    users: await resolveUserNames(users),
     pagination: readPagination(
       paginated.data.pagination ?? paginated.data.meta ?? paginated.data,
       { page, limit },

@@ -3,6 +3,7 @@ import Link from "next/link"
 import { ArrowLeftIcon, ExternalLinkIcon } from "lucide-react"
 
 import { JobDetailsSkeleton } from "@/components/jobs/jobs-skeleton"
+import { JobActivityLinks } from "@/components/jobs/job-activity-links"
 import { JobStatusBadge } from "@/components/jobs/job-status-badge"
 import type { JobStatusFilter } from "@/components/jobs/jobs-table"
 import { Button } from "@/components/ui/button"
@@ -64,7 +65,7 @@ async function JobDetailsContent({ params, searchParams }: JobDetailsPageProps) 
   const fromPage = getPageNumber(query.fromPage)
   const statusFilter = getStatusFilter(query.status)
   const jobsUrl = getJobsHref(fromPage, statusFilter)
-  const result = await getJob(id, fromPage)
+  const result = await getJob(id)
   const poster = result.ok ? await getUser(result.job.postedByUserId) : null
 
   return (
@@ -104,6 +105,8 @@ async function JobDetailsContent({ params, searchParams }: JobDetailsPageProps) 
               </div>
             </CardContent>
           </Card>
+
+          <JobActivityLinks jobId={result.job.id} jobTitle={result.job.title} />
 
           <div className="grid min-w-0 gap-4 lg:grid-cols-3">
             <div className="min-w-0 space-y-4 lg:col-span-2">

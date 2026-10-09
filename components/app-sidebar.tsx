@@ -28,6 +28,7 @@ import {
   LayoutDashboardIcon,
   ListChecksIcon,
   LogOutIcon,
+  ReceiptTextIcon,
   UsersIcon,
 } from "lucide-react"
 import { useLogout } from "@/hooks/use-logout"
@@ -52,6 +53,11 @@ const navigation = [
     title: "Jobs",
     url: "/dashboard/jobs",
     Icon: BriefcaseBusinessIcon,
+  },
+  {
+    title: "Billing History",
+    url: "/dashboard/billing-history",
+    Icon: ReceiptTextIcon,
   },
   {
     title: "Waiting List",

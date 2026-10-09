@@ -90,6 +90,22 @@ export type RoleProfileResult =
   | { ok: true; kind: "none"; profile: null }
   | { ok: false; message: string; status: number }
 
+export function withRoleProfileName(
+  user: UserListItem,
+  result: RoleProfileResult
+): UserListItem {
+  if (!result.ok || result.kind === "none" || !result.profile) return user
+
+  const profileName =
+    result.kind === "instructor"
+      ? result.profile.fullName
+      : result.kind === "institution"
+        ? result.profile.name
+        : result.profile.displayName
+
+  return { ...user, displayName: user.displayName?.trim() || profileName }
+}
+
 export async function getRoleProfile(
   user: UserListItem
 ): Promise<RoleProfileResult> {

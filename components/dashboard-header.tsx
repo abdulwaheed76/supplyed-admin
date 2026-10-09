@@ -47,6 +47,18 @@ function getPageLabel(pathname: string) {
     return "Create job"
   }
 
+  if (pathname === "/dashboard/billing-history") {
+    return "Billing History"
+  }
+
+  if (pathname.startsWith("/dashboard/jobs/") && pathname.endsWith("/conversations")) {
+    return "Job chat"
+  }
+
+  if (pathname.startsWith("/dashboard/jobs/") && pathname.endsWith("/payments")) {
+    return "Job payments"
+  }
+
   if (pathname.startsWith("/dashboard/jobs/")) {
     return "Job details"
   }

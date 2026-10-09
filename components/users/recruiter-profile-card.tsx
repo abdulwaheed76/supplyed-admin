@@ -11,9 +11,10 @@ import type { RecruiterProfile } from "@/lib/users/get-role-profile"
 
 type RecruiterProfileCardProps = {
   profile: RecruiterProfile
+  fallbackName: string
 }
 
-export function RecruiterProfileCard({ profile }: RecruiterProfileCardProps) {
+export function RecruiterProfileCard({ profile, fallbackName }: RecruiterProfileCardProps) {
   const address = [
     profile.address,
     profile.city,
@@ -42,7 +43,7 @@ export function RecruiterProfileCard({ profile }: RecruiterProfileCardProps) {
       <CardContent className="space-y-6">
         <div>
           <h2 className="text-lg font-semibold">
-            {profile.displayName || "Unnamed recruiter"}
+            {profile.displayName?.trim() || fallbackName}
           </h2>
           <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted-foreground">
             {profile.bio || "No recruiter biography has been provided."}
