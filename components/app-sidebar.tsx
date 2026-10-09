@@ -26,6 +26,7 @@ import {
   FileTypeIcon,
   LayoutGridIcon,
   LayoutDashboardIcon,
+  ListChecksIcon,
   LogOutIcon,
   UsersIcon,
 } from "lucide-react"
@@ -51,6 +52,11 @@ const navigation = [
     title: "Jobs",
     url: "/dashboard/jobs",
     Icon: BriefcaseBusinessIcon,
+  },
+  {
+    title: "Waiting List",
+    url: "/dashboard/waiting-list",
+    Icon: ListChecksIcon,
   },
 ]
 

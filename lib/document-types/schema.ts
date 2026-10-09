@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { documentContextSchema } from "@/lib/document-requirements/schema"
+import { documentTypeContextSchema } from "@/lib/document-requirements/schema"
 
 /**
  * Mirrors `DocumentTypeResponseDto` on the backend. `createdAt` / `updatedAt`
@@ -90,7 +90,7 @@ export type CreateDocumentTypeInput = z.infer<
  * `POST /document-requirements` instead.
  */
 const documentTypeRequirementSchema = z.object({
-  context: documentContextSchema,
+  context: documentTypeContextSchema,
   // Required even though the backend columns have defaults: the create form
   // sends a value for all three, substituting a fixed one where it hides the
   // toggle, so a missing field here means the form is wrong rather than the

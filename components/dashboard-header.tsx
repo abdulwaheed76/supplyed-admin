@@ -23,6 +23,10 @@ type DashboardHeaderProps = {
 }
 
 function getPageLabel(pathname: string) {
+  if (pathname === "/dashboard/waiting-list") {
+    return "Waiting List"
+  }
+
   if (pathname === "/dashboard/users") {
     return "Users"
   }
