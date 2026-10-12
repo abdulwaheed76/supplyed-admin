@@ -15,7 +15,47 @@ const columns: Array<{
     heading: "Organisation name",
     value: (submission) => submission.organizationName,
   },
+  { heading: "Area", value: (submission) => submission.area },
   { heading: "Postcode", value: (submission) => submission.postcode },
+  {
+    heading: "Supply days per term",
+    value: (submission) => submission.supplyDaysPerTerm,
+  },
+  {
+    heading: "Current cover booking",
+    value: (submission) => submission.coverBookingMethod,
+  },
+  {
+    heading: "Founding programme interest",
+    value: (submission) =>
+      submission.foundingProgrammeInterest == null
+        ? ""
+        : submission.foundingProgrammeInterest
+          ? "Yes"
+          : "No",
+  },
+  {
+    heading: "Current supply work",
+    value: (submission) => submission.currentSupply,
+  },
+  {
+    heading: "Days wanted per week",
+    value: (submission) => submission.daysPerWeek,
+  },
+  {
+    heading: "Launch email consent",
+    value: (submission) =>
+      submission.emailConsent == null
+        ? ""
+        : submission.emailConsent
+          ? "Yes"
+          : "No",
+  },
+  {
+    heading: "Teaching phases",
+    value: (submission) => submission.phases.join(", "),
+  },
+  { heading: "Main subject", value: (submission) => submission.mainSubject },
   { heading: "School type", value: (submission) => submission.schoolType },
   { heading: "Tier", value: (submission) => submission.tier },
   { heading: "Phase", value: (submission) => submission.phase },
@@ -46,7 +86,7 @@ export function createWaitingListCsv(submissions: WaitingListSubmission[]) {
   const rows = [
     columns.map((column) => csvCell(column.heading)).join(","),
     ...submissions.map((submission) =>
-      columns.map((column) => csvCell(column.value(submission))).join(",")
+      columns.map((column) => csvCell(column.value(submission))).join(","),
     ),
   ]
 

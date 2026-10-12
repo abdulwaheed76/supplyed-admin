@@ -93,7 +93,7 @@ export function SubmissionDetailsDialog({
           setSavedSubmission(updated)
           setStatus(updated.status)
         },
-      }
+      },
     )
   }
 
@@ -110,7 +110,8 @@ export function SubmissionDetailsDialog({
         <DialogHeader className="border-b px-5 py-5 pr-12">
           <DialogTitle>Waiting list submission</DialogTitle>
           <DialogDescription>
-            Review {currentSubmission.name}&apos;s details and update their status.
+            Review {currentSubmission.name}&apos;s details and update their
+            status.
           </DialogDescription>
           <div className="flex items-center gap-2 pt-2">
             <span className="text-sm font-medium">
@@ -135,11 +136,18 @@ export function SubmissionDetailsDialog({
               </Detail>
               <Detail label="Phone" value={currentSubmission.phone} />
               <Detail label="Role" value={currentSubmission.role} />
-              <Detail label="Postcode" value={currentSubmission.postcode} />
+              <Detail label="Area" value={currentSubmission.area} />
+              <Detail
+                label="Postcode area"
+                value={currentSubmission.postcode}
+              />
             </dl>
           </section>
 
-          <section aria-label="Interest details" className="space-y-3 border-t pt-5">
+          <section
+            aria-label="Interest details"
+            className="space-y-3 border-t pt-5"
+          >
             <h3 className="text-sm font-semibold">
               {isSchool ? "School details" : "Teacher details"}
             </h3>
@@ -151,13 +159,72 @@ export function SubmissionDetailsDialog({
                 />
               ) : null}
               {isSchool || currentSubmission.schoolType ? (
-                <Detail label="School type" value={currentSubmission.schoolType} />
+                <Detail
+                  label="School type"
+                  value={currentSubmission.schoolType}
+                />
               ) : null}
-              <Detail label="Tier" value={currentSubmission.tier} />
-              {!isSchool || currentSubmission.phase ? (
+              {isSchool ? (
+                <>
+                  <Detail
+                    label="Supply days per term"
+                    value={currentSubmission.supplyDaysPerTerm}
+                  />
+                  <Detail
+                    label="Current cover booking"
+                    value={currentSubmission.coverBookingMethod}
+                  />
+                  <Detail
+                    label="Founding programme interest"
+                    value={
+                      currentSubmission.foundingProgrammeInterest == null
+                        ? null
+                        : currentSubmission.foundingProgrammeInterest
+                          ? "Yes"
+                          : "No"
+                    }
+                  />
+                </>
+              ) : (
+                <>
+                  <Detail
+                    label="Current supply work"
+                    value={currentSubmission.currentSupply}
+                  />
+                  <Detail
+                    label="Days wanted per week"
+                    value={currentSubmission.daysPerWeek}
+                  />
+                  <Detail
+                    label="Launch email consent"
+                    value={
+                      currentSubmission.emailConsent == null
+                        ? null
+                        : currentSubmission.emailConsent
+                          ? "Yes"
+                          : "No"
+                    }
+                  />
+                  <Detail
+                    label="Teaching phases"
+                    value={currentSubmission.phases.join(", ")}
+                  />
+                  <Detail
+                    label="Main subject"
+                    value={currentSubmission.mainSubject}
+                  />
+                </>
+              )}
+              {currentSubmission.tier ? (
+                <Detail
+                  label="Tier (previous form)"
+                  value={currentSubmission.tier}
+                />
+              ) : null}
+              {currentSubmission.phase ? (
                 <Detail label="Phase" value={currentSubmission.phase} />
               ) : null}
-              {!isSchool || currentSubmission.availability ? (
+              {currentSubmission.availability ? (
                 <Detail
                   label="Availability"
                   value={currentSubmission.availability}
@@ -175,7 +242,10 @@ export function SubmissionDetailsDialog({
             </p>
           </section>
 
-          <section aria-label="Submission information" className="space-y-3 border-t pt-5">
+          <section
+            aria-label="Submission information"
+            className="space-y-3 border-t pt-5"
+          >
             <h3 className="text-sm font-semibold">Submission information</h3>
             <dl className="grid gap-4 sm:grid-cols-2">
               <Detail label="Source" value={currentSubmission.source} />
@@ -195,7 +265,10 @@ export function SubmissionDetailsDialog({
           </section>
         </div>
 
-        <form className="grid gap-3 border-t bg-muted/20 px-5 py-4" onSubmit={handleSubmit}>
+        <form
+          className="grid gap-3 border-t bg-muted/20 px-5 py-4"
+          onSubmit={handleSubmit}
+        >
           <div className="grid gap-2">
             <Label htmlFor={statusId}>Status</Label>
             <select
@@ -217,13 +290,20 @@ export function SubmissionDetailsDialog({
           </div>
 
           {updateStatus.error ? (
-            <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <p
+              role="alert"
+              className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
               {updateStatus.error.message}
             </p>
           ) : null}
           {updateStatus.isSuccess ? (
-            <p role="status" className="text-sm text-emerald-700 dark:text-emerald-400">
-              Status updated to {getSubmissionStatusLabel(currentSubmission.status)}.
+            <p
+              role="status"
+              className="text-sm text-emerald-700 dark:text-emerald-400"
+            >
+              Status updated to{" "}
+              {getSubmissionStatusLabel(currentSubmission.status)}.
             </p>
           ) : null}
 

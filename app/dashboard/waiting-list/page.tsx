@@ -82,7 +82,7 @@ export default async function WaitingListPage({ searchParams }: WaitingListPageP
                   <TableHead className="pl-4 md:pl-6">Contact</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Organisation</TableHead>
-                  <TableHead>Postcode</TableHead>
+                  <TableHead>Area</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Submitted</TableHead>
                   <TableHead className="pr-4 text-right md:pr-6">Actions</TableHead>
@@ -112,7 +112,7 @@ export default async function WaitingListPage({ searchParams }: WaitingListPageP
                     </TableCell>
                     <TableCell>{getSubmissionTypeLabel(submission.type)}</TableCell>
                     <TableCell className="max-w-64 whitespace-normal break-words">{submission.organizationName || "Not provided"}</TableCell>
-                    <TableCell>{submission.postcode || "Not provided"}</TableCell>
+                    <TableCell>{submission.area || submission.postcode || "Not provided"}</TableCell>
                     <TableCell><SubmissionStatusBadge status={submission.status} /></TableCell>
                     <TableCell className="text-muted-foreground">{formatSubmissionDate(submission.createdAt)}</TableCell>
                     <TableCell className="pr-4 text-right md:pr-6">
