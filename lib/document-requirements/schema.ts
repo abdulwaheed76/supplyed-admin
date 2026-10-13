@@ -2,9 +2,9 @@ import { z } from "zod"
 
 /**
  * Mirrors the `DocumentContext` enum in the backend's Prisma schema. The
- * context lives on `DocumentRequirement`, not on `DocumentType` — a type is
+ * context lives on `DocumentRequirement`, not on `DocumentType` -- a type is
  * linked to a part of the platform by creating one requirement row per
- * context, keyed `@@unique([documentTypeId, context])` — so a type can be
+ * context, keyed `@@unique([documentTypeId, context])` -- so a type can be
  * linked to a context at most once.
  */
 export const DOCUMENT_CONTEXTS = [
@@ -14,9 +14,16 @@ export const DOCUMENT_CONTEXTS = [
   "APPLICATION",
 ] as const
 
+export const DOCUMENT_TYPE_CONTEXTS = [
+  "INSTRUCTOR_PROFILE",
+  "INSTITUTION_PROFILE",
+] as const
+
 export const documentContextSchema = z.enum(DOCUMENT_CONTEXTS)
+export const documentTypeContextSchema = z.enum(DOCUMENT_TYPE_CONTEXTS)
 
 export type DocumentContext = z.infer<typeof documentContextSchema>
+export type DocumentTypeContext = z.infer<typeof documentTypeContextSchema>
 
 /** Mirrors `DocumentRequirementResponseDto`. Dates arrive as ISO strings. */
 export const documentRequirementSchema = z.object({
@@ -40,7 +47,7 @@ export type DocumentRequirement = z.infer<typeof documentRequirementSchema>
  */
 export const createDocumentRequirementInputSchema = z.object({
   documentTypeId: z.string().min(1),
-  context: documentContextSchema,
+  context: documentTypeContextSchema,
   isRequired: z.boolean().optional(),
   requiresReview: z.boolean().optional(),
   isActive: z.boolean().optional(),

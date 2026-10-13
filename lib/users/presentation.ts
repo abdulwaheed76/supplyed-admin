@@ -33,18 +33,16 @@ export function formatUserDateTime(value?: string | null) {
   return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(date) + " UTC"
 }
 
+export function getUserProvidedName(user: UserListItem) {
+  return user.name?.trim() || user.fullName?.trim() || user.displayName?.trim()
+}
+
 export function getUserDisplayName(user: UserListItem) {
-  return user.name?.trim() || "Unnamed user"
+  return getUserProvidedName(user) || user.email.split("@")[0]
 }
 
 export function getUserInitials(user: UserListItem) {
-  const name = user.name?.trim()
-
-  if (!name) {
-    return user.email.charAt(0).toUpperCase()
-  }
-
-  return name
+  return getUserDisplayName(user)
     .split(/\s+/)
     .slice(0, 2)
     .map((part) => part.charAt(0))

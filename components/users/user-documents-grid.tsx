@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { EyeIcon, EyeOffIcon, FileTextIcon } from "lucide-react"
+import { DownloadIcon, EyeIcon, EyeOffIcon, FileTextIcon } from "lucide-react"
 
 import { DocumentReviewDialog } from "@/components/documents/document-review-dialog"
 import { DocumentStatusBadge } from "@/components/documents/document-status-badge"
@@ -101,7 +101,12 @@ export function UserDocumentsGrid({
                     ) : null}
                   </div>
                 </div>
-                <Button asChild size="sm" variant="ghost" className="w-full sm:w-auto">
+                <Button
+                  asChild
+                  size="sm"
+                  variant="ghost"
+                  className="w-full sm:w-auto"
+                >
                   <Link
                     href={`/dashboard/users/${encodeURIComponent(userId)}/documents/${encodeURIComponent(document.id)}?from=user-documents`}
                     aria-label={`Open full preview for ${displayName}`}
@@ -124,6 +129,7 @@ export function UserDocumentsGrid({
                     title={`Preview of ${displayName}`}
                     className="h-full w-full border-0 pt-9"
                     referrerPolicy="no-referrer"
+                    loading="lazy"
                   />
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center px-6 pt-9 text-center">
@@ -133,7 +139,7 @@ export function UserDocumentsGrid({
                     <h3 className="mt-3 font-medium">Preview unavailable</h3>
                     <p className="mt-1 max-w-sm text-sm text-muted-foreground">
                       {version
-                        ? "This file type cannot be displayed in the browser."
+                        ? "Download this file to view it in its original application."
                         : "No file has been uploaded for this document yet."}
                     </p>
                   </div>
@@ -151,7 +157,20 @@ export function UserDocumentsGrid({
                       : "Awaiting upload"}
                   </p>
                 </div>
-                <DocumentReviewDialog document={document} />
+                <div className="flex flex-wrap items-center gap-2">
+                  {version ? (
+                    <Button asChild size="sm" variant="outline">
+                      <a
+                        href={`/api/documents/${encodeURIComponent(document.id)}/content?download=1`}
+                        download
+                      >
+                        <DownloadIcon aria-hidden="true" />
+                        Download
+                      </a>
+                    </Button>
+                  ) : null}
+                  <DocumentReviewDialog document={document} />
+                </div>
               </div>
 
               {reviewComment ? (

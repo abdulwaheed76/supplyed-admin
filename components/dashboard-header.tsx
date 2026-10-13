@@ -23,6 +23,10 @@ type DashboardHeaderProps = {
 }
 
 function getPageLabel(pathname: string) {
+  if (pathname === "/dashboard/waiting-list") {
+    return "Waiting List"
+  }
+
   if (pathname === "/dashboard/users") {
     return "Users"
   }
@@ -41,6 +45,18 @@ function getPageLabel(pathname: string) {
 
   if (pathname === "/dashboard/jobs/new") {
     return "Create job"
+  }
+
+  if (pathname === "/dashboard/billing-history") {
+    return "Billing History"
+  }
+
+  if (pathname.startsWith("/dashboard/jobs/") && pathname.endsWith("/conversations")) {
+    return "Job chat"
+  }
+
+  if (pathname.startsWith("/dashboard/jobs/") && pathname.endsWith("/payments")) {
+    return "Job payments"
   }
 
   if (pathname.startsWith("/dashboard/jobs/")) {

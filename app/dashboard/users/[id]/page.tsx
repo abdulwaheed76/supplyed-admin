@@ -27,6 +27,7 @@ import { getVerifiedUserIds } from "@/lib/users/get-verified-user-ids"
 import type { UserListItem } from "@/lib/users/schema"
 import {
   getRoleProfile,
+  withRoleProfileName,
   type RoleProfileResult,
 } from "@/lib/users/get-role-profile"
 import {
@@ -134,7 +135,7 @@ function UserDetailTabs({
   )
 }
 
-function RoleProfileView({ result }: { result: RoleProfileResult | null }) {
+function RoleProfileView({ result, user }: { result: RoleProfileResult | null; user: UserListItem }) {
   if (!result || (result.ok && result.kind === "none")) {
     return null
   }
@@ -175,7 +176,7 @@ function RoleProfileView({ result }: { result: RoleProfileResult | null }) {
   ) : result.kind === "institution" ? (
     <InstitutionProfileCard profile={result.profile} />
   ) : (
-    <RecruiterProfileCard profile={result.profile} />
+    <RecruiterProfileCard profile={result.profile} fallbackName={getUserDisplayName(user)} />
   )
 }
 
@@ -195,7 +196,7 @@ function ProfileTab({
 
   return (
     <>
-      <RoleProfileView result={roleProfile} />
+      <RoleProfileView result={roleProfile} user={user} />
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         <Card>
@@ -363,6 +364,7 @@ export default async function UserDetailsPage({
 
   if (result.ok) {
     roleProfile = await getRoleProfile(result.user)
+    result.user = withRoleProfileName(result.user, roleProfile)
     if (activeTab === "documents") {
       documentsResult = await getUserDocuments(result.user.id)
     }

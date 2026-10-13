@@ -15,6 +15,7 @@ export const proxy = auth
 export const config = {
   matcher: [
     "/dashboard/:path*",
+    "/api/contact/founding-interest/:path*",
     "/api/document-requirements/:path*",
     "/api/document-types/:path*",
     "/api/documents/:path*",

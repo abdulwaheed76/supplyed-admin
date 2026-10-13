@@ -11,9 +11,9 @@ import {
 } from "@/hooks/use-document-requirements"
 import { formatDocumentContext } from "@/lib/document-requirements/presentation"
 import {
-  DOCUMENT_CONTEXTS,
-  type DocumentContext,
+  DOCUMENT_TYPE_CONTEXTS,
   type DocumentRequirement,
+  type DocumentTypeContext,
   type UpdateDocumentRequirementInput,
 } from "@/lib/document-requirements/schema"
 
@@ -39,8 +39,12 @@ function deleteKey(id: string) {
   return `delete:${id}`
 }
 
-function createKey(context: DocumentContext) {
+function createKey(context: DocumentTypeContext) {
   return `create:${context}`
+}
+
+function isDocumentTypeContext(context: DocumentRequirement["context"]): context is DocumentTypeContext {
+  return DOCUMENT_TYPE_CONTEXTS.includes(context as DocumentTypeContext)
 }
 
 export function DocumentRequirementsPanel({
@@ -58,13 +62,16 @@ export function DocumentRequirementsPanel({
     createRequirement.error ?? updateRequirement.error ?? deleteRequirement.error
 
   // At most one requirement per context, so the enum's order is a total order.
-  const rows = [...requirements].sort(
-    (a, b) =>
-      DOCUMENT_CONTEXTS.indexOf(a.context) - DOCUMENT_CONTEXTS.indexOf(b.context)
-  )
+  const rows = requirements
+    .filter((requirement) => isDocumentTypeContext(requirement.context))
+    .sort(
+      (a, b) =>
+        DOCUMENT_TYPE_CONTEXTS.indexOf(a.context as DocumentTypeContext) -
+        DOCUMENT_TYPE_CONTEXTS.indexOf(b.context as DocumentTypeContext)
+    )
 
   const linkedContexts = new Set(rows.map((requirement) => requirement.context))
-  const availableContexts = DOCUMENT_CONTEXTS.filter(
+  const availableContexts = DOCUMENT_TYPE_CONTEXTS.filter(
     (context) => !linkedContexts.has(context)
   )
 
@@ -82,7 +89,7 @@ export function DocumentRequirementsPanel({
     })
   }
 
-  function handleAdd(context: DocumentContext) {
+  function handleAdd(context: DocumentTypeContext) {
     const key = createKey(context)
 
     setPending(key, true)

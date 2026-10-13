@@ -2,7 +2,9 @@
 
 import * as React from "react"
 import { useMutation } from "@tanstack/react-query"
+import { EyeIcon, EyeOffIcon } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
 
@@ -57,6 +59,7 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<"div">) {
   const router = useRouter()
+  const [isPasswordVisible, setIsPasswordVisible] = React.useState(false)
   const loginMutation = useMutation({
     mutationFn: login,
     onSuccess: () => {
@@ -114,16 +117,39 @@ export function LoginForm({
                     Forgot your password?
                   </a>
                 </div>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  aria-invalid={loginMutation.isError}
-                  disabled={loginMutation.isPending}
-                  minLength={8}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    name="password"
+                    type={isPasswordVisible ? "text" : "password"}
+                    autoComplete="current-password"
+                    aria-invalid={loginMutation.isError}
+                    disabled={loginMutation.isPending}
+                    minLength={8}
+                    required
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={
+                      isPasswordVisible ? "Hide password" : "Show password"
+                    }
+                    aria-pressed={isPasswordVisible}
+                    disabled={loginMutation.isPending}
+                    onClick={() =>
+                      setIsPasswordVisible((isVisible) => !isVisible)
+                    }
+                    className="absolute right-0.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {isPasswordVisible ? (
+                      <EyeOffIcon aria-hidden="true" />
+                    ) : (
+                      <EyeIcon aria-hidden="true" />
+                    )}
+                  </Button>
+                </div>
               </Field>
               <Field>
                 {loginMutation.error ? (
@@ -151,7 +177,7 @@ export function LoginForm({
         </CardContent>
       </Card>
       <FieldDescription className="px-6 text-center">
-        By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
+        By clicking continue, you agree to our <Link href="/terms-and-conditions" target="_blank" rel="noreferrer">Terms and Conditions</Link>{" "}
         and <a href="#">Privacy Policy</a>.
       </FieldDescription>
     </div>

@@ -90,6 +90,22 @@ export type RoleProfileResult =
   | { ok: true; kind: "none"; profile: null }
   | { ok: false; message: string; status: number }
 
+export function withRoleProfileName(
+  user: UserListItem,
+  result: RoleProfileResult
+): UserListItem {
+  if (!result.ok || result.kind === "none" || !result.profile) return user
+
+  const profileName =
+    result.kind === "instructor"
+      ? result.profile.fullName
+      : result.kind === "institution"
+        ? result.profile.name
+        : result.profile.displayName
+
+  return { ...user, displayName: user.displayName?.trim() || profileName }
+}
+
 export async function getRoleProfile(
   user: UserListItem
 ): Promise<RoleProfileResult> {
@@ -104,9 +120,13 @@ export async function getRoleProfile(
   if (isInstructor) {
     const result = await adminApiRequest({
       path: "instructors",
+      searchParams: { userId: user.id },
       schema: z.object({
         success: z.literal(true),
-        data: z.array(instructorProfileSchema),
+        data: z.union([
+          z.array(instructorProfileSchema),
+          z.object({ instructors: z.array(instructorProfileSchema) }),
+        ]),
       }),
       serviceName: "instructors",
       fallbackMessage: "Unable to load instructors.",
@@ -121,16 +141,23 @@ export async function getRoleProfile(
       ok: true,
       kind: "instructor",
       profile:
-        result.data.data.find((profile) => profile.userId === user.id) ?? null,
+        (Array.isArray(result.data.data)
+          ? result.data.data
+          : result.data.data.instructors
+        ).find((profile) => profile.userId === user.id) ?? null,
     }
   }
 
   if (isInstitution) {
     const result = await adminApiRequest({
       path: "institutions",
+      searchParams: { userId: user.id },
       schema: z.object({
         success: z.literal(true),
-        data: z.array(institutionProfileSchema),
+        data: z.union([
+          z.array(institutionProfileSchema),
+          z.object({ institutions: z.array(institutionProfileSchema) }),
+        ]),
       }),
       serviceName: "institutions",
       fallbackMessage: "Unable to load institutions.",
@@ -145,7 +172,10 @@ export async function getRoleProfile(
       ok: true,
       kind: "institution",
       profile:
-        result.data.data.find((profile) => profile.userId === user.id) ?? null,
+        (Array.isArray(result.data.data)
+          ? result.data.data
+          : result.data.data.institutions
+        ).find((profile) => profile.userId === user.id) ?? null,
     }
   }
 

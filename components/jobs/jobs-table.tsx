@@ -7,6 +7,7 @@ import {
 } from "lucide-react"
 
 import { JobStatusBadge } from "@/components/jobs/job-status-badge"
+import { JobActivityLinks } from "@/components/jobs/job-activity-links"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -143,19 +144,19 @@ export function JobsTable({
         </CardContent>
       ) : (
         <CardContent className="px-0">
-          <Table className="min-w-[1250px] table-fixed">
+          <Table className="min-w-[1350px] table-fixed">
             <TableCaption className="sr-only">
               A paginated list of Supplyed job postings
             </TableCaption>
             <colgroup>
-              <col className="w-[22%]" />
-              <col className="w-[16%]" />
-              <col className="w-[17%]" />
+              <col className="w-[20%]" />
+              <col className="w-[14%]" />
+              <col className="w-[13%]" />
               <col className="w-[12%]" />
               <col className="w-[9%]" />
               <col className="w-[8%]" />
               <col className="w-[9%]" />
-              <col className="w-[7%]" />
+              <col className="w-[15%]" />
             </colgroup>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
@@ -245,19 +246,23 @@ export function JobsTable({
                       {formatJobDate(job.createdAt)}
                     </TableCell>
                     <TableCell className="py-4 pr-4 text-right align-top md:pr-6">
-                      <Button asChild size="sm" variant="outline">
-                        <Link
-                          href={getJobDetailsHref(
-                            job.id,
-                            pagination.page,
-                            statusFilter
-                          )}
-                          aria-label={`View details for ${job.title}`}
-                        >
-                          <EyeIcon data-icon="inline-start" />
-                          Details
-                        </Link>
-                      </Button>
+                      <div className="inline-flex items-center rounded-lg border bg-muted/30 p-0.5">
+                        <Button asChild size="sm" variant="ghost" className="h-8 rounded-md px-2 hover:bg-background">
+                          <Link
+                            href={getJobDetailsHref(
+                              job.id,
+                              pagination.page,
+                              statusFilter
+                            )}
+                            aria-label={`View details for ${job.title}`}
+                          >
+                            <EyeIcon data-icon="inline-start" />
+                            Details
+                          </Link>
+                        </Button>
+                        <span aria-hidden="true" className="mx-1 h-4 w-px bg-border" />
+                        <JobActivityLinks jobId={job.id} jobTitle={job.title} compact />
+                      </div>
                     </TableCell>
                   </TableRow>
                 )

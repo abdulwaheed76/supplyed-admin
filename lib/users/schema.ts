@@ -4,6 +4,8 @@ export const userSchema = z.object({
   id: z.string(),
   email: z.email(),
   name: z.string().nullable().optional(),
+  fullName: z.string().nullable().optional(),
+  displayName: z.string().nullable().optional(),
   role: z.string(),
   countryCode: z.string().nullable().optional(),
   profileStatus: z.string().nullable().optional(),
