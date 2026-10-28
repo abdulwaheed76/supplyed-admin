@@ -6,7 +6,8 @@
     "dev": "next dev --webpack -p 3001",
     "build": "next build",
     "start": "next start -p 3001",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:dropdowns": "node --test tests/dropdowns.test.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.4",

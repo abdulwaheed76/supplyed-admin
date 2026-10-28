@@ -70,6 +70,7 @@ async function updateProfileStatus({
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ userId, status }),
+      signal: AbortSignal.timeout(15_000),
     }
   )
   const body: unknown = await response.json().catch(() => null)

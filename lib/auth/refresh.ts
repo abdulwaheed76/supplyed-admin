@@ -61,10 +61,12 @@ export async function refreshAdminSession(
       method: "POST",
       headers: {
         Accept: "application/json",
+        ...(process.env.BFF_SHARED_SECRET ? { "X-SupplyEd-BFF": process.env.BFF_SHARED_SECRET } : {}),
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ refreshToken }),
       cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
     })
   } catch {
     return {

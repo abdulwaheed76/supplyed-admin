@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input"
 type LoginInput = {
   email: string
   password: string
+  code?: string
 }
 
 async function login(input: LoginInput) {
@@ -31,6 +32,7 @@ async function login(input: LoginInput) {
   // the failure inline instead of bouncing through /login?error=.
   const result = await signIn("credentials", { ...input, redirect: false })
 
+  if (result?.code === "two_factor_required") return { twoFactorRequired: true as const }
   if (!result || result.error) {
     throw new Error(getSignInErrorMessage(result?.code))
   }
@@ -59,10 +61,12 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<"div">) {
   const router = useRouter()
+  const [twoFactorRequired, setTwoFactorRequired] = React.useState(false)
   const [isPasswordVisible, setIsPasswordVisible] = React.useState(false)
   const loginMutation = useMutation({
     mutationFn: login,
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if ("twoFactorRequired" in result) { setTwoFactorRequired(true); return }
       router.replace(getSafeRedirect())
       router.refresh()
     },
@@ -79,7 +83,7 @@ export function LoginForm({
       return
     }
 
-    loginMutation.mutate({ email, password })
+    loginMutation.mutate({ email, password, code: twoFactorRequired ? String(formData.get("code") ?? "").trim().toUpperCase() : undefined })
   }
 
   return (
@@ -151,6 +155,12 @@ export function LoginForm({
                   </Button>
                 </div>
               </Field>
+              {twoFactorRequired && <Field>
+                <FieldLabel htmlFor="code">Authenticator or recovery code</FieldLabel>
+                <Input id="code" name="code" autoComplete="one-time-code" autoFocus required maxLength={64} disabled={loginMutation.isPending} />
+                <FieldDescription>Enter your 6-digit code or a saved recovery code. If the challenge expires, start again.</FieldDescription>
+                <Button type="button" variant="ghost" onClick={() => { setTwoFactorRequired(false); loginMutation.reset() }}>Start again</Button>
+              </Field>}
               <Field>
                 {loginMutation.error ? (
                   <FieldError>{loginMutation.error.message}</FieldError>

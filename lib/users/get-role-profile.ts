@@ -41,7 +41,7 @@ const institutionProfileSchema = z.object({
   county: z.string().nullable().optional(),
   postalCode: z.string().nullable().optional(),
   countryCode: z.string(),
-  staffingNeeds: z.string().nullable().optional(),
+  staffingNeeds: z.array(z.string()),
   coverTypes: z.array(z.string()),
   typicalPupilCount: z.number().int().nonnegative().nullable().optional(),
   complianceContact: z.string().nullable().optional(),

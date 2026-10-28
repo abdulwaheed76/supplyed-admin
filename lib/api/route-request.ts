@@ -14,11 +14,16 @@ import type { z } from "zod"
  * surfaced; the message is written for an admin to read.
  */
 type RouteRequestOptions<T> = {
-  method?: "POST" | "PATCH" | "PUT" | "DELETE"
+  method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE"
+  signal?: AbortSignal
   body?: unknown
   /** Parses the success response. Omit when the caller ignores the body. */
   schema?: z.ZodType<T>
   fallbackMessage?: string
+}
+
+export class RouteRequestError extends Error {
+  constructor(message: string, public status: number, public code?: string, public requestId?: string) { super(message) }
 }
 
 function readErrorMessage(body: unknown, fallback: string) {
@@ -40,6 +45,7 @@ export async function routeRequest<T = unknown>(
   {
     method = "POST",
     body,
+    signal,
     schema,
     fallbackMessage = "The request could not be completed.",
   }: RouteRequestOptions<T> = {}
@@ -56,6 +62,8 @@ export async function routeRequest<T = unknown>(
   try {
     response = await fetch(url, {
       method,
+      cache: "no-store",
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
       headers: {
         Accept: "application/json",
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
@@ -71,7 +79,10 @@ export async function routeRequest<T = unknown>(
   const responseBody: unknown = await response.json().catch(() => null)
 
   if (!response.ok) {
-    throw new Error(readErrorMessage(responseBody, fallbackMessage))
+    const details = responseBody as { code?: unknown; requestId?: unknown } | null
+    throw new RouteRequestError(readErrorMessage(responseBody, fallbackMessage), response.status,
+      typeof details?.code === "string" ? details.code : undefined,
+      typeof details?.requestId === "string" ? details.requestId : undefined)
   }
 
   if (!schema) {

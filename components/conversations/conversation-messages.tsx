@@ -39,7 +39,7 @@ export function ConversationMessages({
       const response = await fetch(`/api/conversations/${encodeURIComponent(conversationId)}/messages?${query}`, {
         headers: { Accept: "application/json" },
         cache: "no-store",
-        signal: controller.signal,
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)]),
       })
       const body: unknown = await response.json().catch(() => null)
       if (!response.ok) {

@@ -1,0 +1,410 @@
+{
+  "subject": {
+    "controlIds": [
+      "O03",
+      "O12",
+      "S04",
+      "S10",
+      "J05",
+      "I04",
+      "D03",
+      "R03"
+    ],
+    "sources": [
+      "components/molecules/TeachingSelectionFields.tsx",
+      "features/teaching-catalogue/use-teaching-catalogue.ts"
+    ]
+  },
+  "skill": {
+    "controlIds": [
+      "O04",
+      "S05",
+      "J06",
+      "I05"
+    ],
+    "sources": [
+      "components/molecules/TeachingSelectionFields.tsx",
+      "features/teaching-catalogue/use-teaching-catalogue.ts"
+    ]
+  },
+  "keyStage": {
+    "controlIds": [
+      "O05",
+      "S06",
+      "J07",
+      "D02",
+      "D04"
+    ],
+    "sources": [
+      "components/molecules/TeachingSelectionFields.tsx",
+      "features/teaching-catalogue/use-teaching-catalogue.ts"
+    ]
+  },
+  "country": {
+    "controlIds": [
+      "O01",
+      "O08",
+      "S01",
+      "S07",
+      "J03",
+      "R01"
+    ],
+    "sources": [
+      "lib/uk-validation.ts",
+      "components/organisms/onboarding/CountryCityFields.tsx",
+      "components/organisms/SettingsPage.tsx",
+      "components/organisms/PostJobPage.tsx"
+    ]
+  },
+  "city": {
+    "controlIds": [
+      "O02",
+      "O09",
+      "S02",
+      "S08",
+      "J01",
+      "I03",
+      "D05",
+      "R01"
+    ],
+    "sources": [
+      "lib/uk-validation.ts",
+      "components/organisms/onboarding/CountryCityFields.tsx",
+      "components/organisms/SettingsPage.tsx",
+      "components/organisms/PostJobPage.tsx"
+    ]
+  },
+  "region": {
+    "controlIds": [
+      "O10",
+      "S03",
+      "S09",
+      "J02",
+      "R02"
+    ],
+    "sources": [
+      "lib/uk-validation.ts",
+      "components/organisms/onboarding/CountryCityFields.tsx",
+      "components/organisms/SettingsPage.tsx",
+      "components/organisms/PostJobPage.tsx"
+    ]
+  },
+  "currency": {
+    "controlIds": [
+      "O06"
+    ],
+    "sources": [
+      "components/organisms/onboarding/constants.ts"
+    ]
+  },
+  "institutionType": {
+    "controlIds": [
+      "O07"
+    ],
+    "sources": [
+      "components/organisms/onboarding/steps/InstitutionDetailsStep.tsx"
+    ]
+  },
+  "coverType": {
+    "controlIds": [
+      "O11"
+    ],
+    "sources": [
+      "components/organisms/onboarding/constants.ts",
+      "components/organisms/SettingsPage.tsx"
+    ]
+  },
+  "payType": {
+    "controlIds": [
+      "J04",
+      "I02"
+    ],
+    "sources": [
+      "components/organisms/PostJobPage.tsx",
+      "components/organisms/InvitationModal.tsx"
+    ]
+  },
+  "timezone": {
+    "controlIds": [
+      "I01"
+    ],
+    "sources": [
+      "components/organisms/InvitationModal.tsx"
+    ]
+  },
+  "waitlistSchoolRole": {
+    "controlIds": [
+      "W01"
+    ],
+    "sources": [
+      "features/contact/waitlist-options.ts",
+      "components/organisms/FoundingInterestForm.tsx"
+    ]
+  },
+  "waitlistSchoolArea": {
+    "controlIds": [
+      "W02"
+    ],
+    "sources": [
+      "features/contact/waitlist-options.ts",
+      "components/organisms/FoundingInterestForm.tsx"
+    ]
+  },
+  "waitlistSchoolType": {
+    "controlIds": [
+      "W03"
+    ],
+    "sources": [
+      "features/contact/waitlist-options.ts",
+      "components/organisms/FoundingInterestForm.tsx"
+    ]
+  },
+  "supplyDaysPerTerm": {
+    "controlIds": [
+      "W04"
+    ],
+    "sources": [
+      "features/contact/waitlist-options.ts",
+      "components/organisms/FoundingInterestForm.tsx"
+    ]
+  },
+  "coverBookingMethod": {
+    "controlIds": [
+      "W05"
+    ],
+    "sources": [
+      "features/contact/waitlist-options.ts",
+      "components/organisms/FoundingInterestForm.tsx"
+    ]
+  },
+  "waitlistTeacherRole": {
+    "controlIds": [
+      "W06"
+    ],
+    "sources": [
+      "features/contact/waitlist-options.ts",
+      "components/organisms/FoundingInterestForm.tsx"
+    ]
+  },
+  "waitlistTeacherArea": {
+    "controlIds": [
+      "W07"
+    ],
+    "sources": [
+      "features/contact/waitlist-options.ts",
+      "components/organisms/FoundingInterestForm.tsx"
+    ]
+  },
+  "currentSupply": {
+    "controlIds": [
+      "W08"
+    ],
+    "sources": [
+      "features/contact/waitlist-options.ts",
+      "components/organisms/FoundingInterestForm.tsx"
+    ]
+  },
+  "daysPerWeek": {
+    "controlIds": [
+      "W09"
+    ],
+    "sources": [
+      "features/contact/waitlist-options.ts",
+      "components/organisms/FoundingInterestForm.tsx"
+    ]
+  },
+  "waitlistPhase": {
+    "controlIds": [],
+    "sources": [
+      "features/contact/waitlist-options.ts",
+      "components/organisms/FoundingInterestForm.tsx"
+    ]
+  },
+  "availability": {
+    "controlIds": [
+      "L06"
+    ],
+    "sources": [
+      "features/contact/founding-interest-options.ts",
+      "public/founding-teachers (1).html"
+    ]
+  },
+  "discoveryUrgency": {
+    "controlIds": [
+      "D01"
+    ],
+    "sources": [
+      "components/organisms/FindJobsPage.tsx"
+    ]
+  },
+  "teacherRating": {
+    "controlIds": [
+      "D06"
+    ],
+    "sources": [
+      "components/organisms/FindTeachersPage.tsx"
+    ]
+  },
+  "bookingInvoiceState": {
+    "controlIds": [
+      "B01"
+    ],
+    "sources": [
+      "components/organisms/BookingsPage.tsx"
+    ]
+  },
+  "refundReason": {
+    "controlIds": [
+      "B02"
+    ],
+    "sources": [
+      "components/organisms/BillingPage.tsx"
+    ]
+  },
+  "applicationStatus": {
+    "controlIds": [],
+    "sources": [
+      "components/organisms/TeacherApplicationsPage.tsx",
+      "components/organisms/ApplicationsWorkspacePage.tsx",
+      "features/applications/workflow.ts"
+    ]
+  },
+  "jobStatus": {
+    "controlIds": [
+      "M03"
+    ],
+    "sources": [
+      "components/organisms/JobManagementList.tsx"
+    ]
+  },
+  "jobInvitationStatus": {
+    "controlIds": [],
+    "sources": [
+      "components/organisms/JobInvitationsPage.tsx"
+    ]
+  },
+  "bookingStatus": {
+    "controlIds": [],
+    "sources": [
+      "components/organisms/BookingsPage.tsx"
+    ]
+  },
+  "invoiceStatus": {
+    "controlIds": [],
+    "sources": [
+      "components/organisms/BillingPage.tsx"
+    ]
+  },
+  "profileStatus": {
+    "controlIds": [],
+    "sources": [
+      "prisma/schema.prisma"
+    ]
+  },
+  "foundingInterestStatus": {
+    "controlIds": [],
+    "sources": [
+      "src/modules/contact/dto/founding-interest.dto.ts"
+    ]
+  },
+  "documentVerificationStatus": {
+    "controlIds": [],
+    "sources": [
+      "prisma/schema.prisma"
+    ]
+  },
+  "signatoryApprovalStatus": {
+    "controlIds": [],
+    "sources": [
+      "prisma/schema.prisma"
+    ]
+  },
+  "legacySchoolRole": {
+    "controlIds": [
+      "L01"
+    ],
+    "sources": [
+      "features/contact/founding-interest-options.ts",
+      "public/founding-schools (1) (1).html",
+      "src/modules/contact/dto/register-interest.dto.ts"
+    ]
+  },
+  "legacySchoolType": {
+    "controlIds": [
+      "L02"
+    ],
+    "sources": [
+      "features/contact/founding-interest-options.ts",
+      "public/founding-schools (1) (1).html"
+    ]
+  },
+  "legacySchoolTier": {
+    "controlIds": [
+      "L03"
+    ],
+    "sources": [
+      "features/contact/founding-interest-options.ts",
+      "public/founding-schools (1) (1).html"
+    ]
+  },
+  "legacyTeacherRole": {
+    "controlIds": [
+      "L04"
+    ],
+    "sources": [
+      "features/contact/founding-interest-options.ts",
+      "public/founding-teachers (1).html"
+    ]
+  },
+  "legacyTeacherPhase": {
+    "controlIds": [
+      "L05"
+    ],
+    "sources": [
+      "features/contact/founding-interest-options.ts",
+      "public/founding-teachers (1).html"
+    ]
+  },
+  "proposalFontFamily": {
+    "controlIds": [
+      "A01"
+    ],
+    "sources": [
+      "components/molecules/ProposalEditor.tsx"
+    ]
+  },
+  "proposalFontSize": {
+    "controlIds": [
+      "A02"
+    ],
+    "sources": [
+      "components/molecules/ProposalEditor.tsx"
+    ]
+  },
+  "proposalTextColor": {
+    "controlIds": [
+      "A03"
+    ],
+    "sources": [
+      "components/molecules/ProposalEditor.tsx"
+    ]
+  },
+  "descriptionFontSize": {
+    "controlIds": [
+      "R04"
+    ],
+    "sources": [
+      "components/molecules/RoleDescriptionEditor.tsx"
+    ]
+  },
+  "themeAccent": {
+    "controlIds": [
+      "M06"
+    ],
+    "sources": [
+      "lib/theme.ts",
+      "components/molecules/PublicThemeControls.tsx",
+      "components/organisms/TweaksPanel.tsx"
+    ]
+  }
+}

@@ -129,7 +129,7 @@ export function InstitutionProfileCard({
                   Staffing needs
                 </h4>
                 <p className="mt-2 max-w-full break-words text-sm leading-relaxed [overflow-wrap:anywhere]">
-                  {profile.staffingNeeds ||
+                  {profile.staffingNeeds.join(", ") ||
                     "No staffing needs have been provided."}
                 </p>
               </div>

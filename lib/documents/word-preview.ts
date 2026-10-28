@@ -1,8 +1,5 @@
 import "server-only"
 
-import mammoth from "mammoth"
-import WordExtractor from "word-extractor"
-import sanitizeHtml from "sanitize-html"
 
 export const PREVIEW_HTML_CSP =
   "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'"
@@ -31,46 +28,6 @@ export function renderPreviewError(message: string) {
   )
 }
 
-export async function renderDocxPreview(buffer: Buffer) {
-  const result = await mammoth.convertToHtml(
-    { buffer },
-    {
-      externalFileAccess: false,
-      includeEmbeddedStyleMap: false,
-      convertImage: mammoth.images.imgElement(async (image) => {
-        if (!/^image\/(png|jpeg|gif|webp)$/.test(image.contentType))
-          return { src: "" }
-        return {
-          src: `data:${image.contentType};base64,${await image.readAsBase64String()}`,
-        }
-      }),
-    },
-  )
-  const html = sanitizeHtml(result.value, {
-    allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img"]),
-    allowedAttributes: {
-      a: ["id", "name"],
-      img: ["src", "alt"],
-      td: ["colspan", "rowspan"],
-      th: ["colspan", "rowspan"],
-    },
-    allowedSchemes: [],
-    allowedSchemesByTag: { img: ["data"] },
-    allowProtocolRelative: false,
-    exclusiveFilter: (frame) =>
-      frame.tag === "img" &&
-      !/^data:image\/(png|jpeg|gif|webp);base64,[a-z0-9+/=\s]+$/i.test(
-        frame.attribs.src || "",
-      ),
-  })
-  if (!html.trim())
-    throw new Error("The Word document has no previewable content.")
-  return previewPage(
-    `<div class="notice">Word document preview. Download the original for its exact formatting.</div>${html}`,
-    "Word document preview",
-  )
-}
-
 export async function readPreviewBuffer(response: Response) {
   if (Number(response.headers.get("content-length")) > MAX_WORD_PREVIEW_BYTES) {
     await response.body?.cancel()
@@ -95,29 +52,4 @@ export async function readPreviewBuffer(response: Response) {
     reader.releaseLock()
   }
   return Buffer.concat(chunks, size)
-}
-
-export async function renderLegacyWordPreview(buffer: Buffer) {
-  const document = await new WordExtractor().extract(buffer)
-  const sections = [
-    ["", document.getHeaders({ includeFooters: false })],
-    ["", document.getBody()],
-    ["Text boxes", document.getTextboxes()],
-    ["Footnotes", document.getFootnotes()],
-    ["Endnotes", document.getEndnotes()],
-    ["Comments", document.getAnnotations()],
-    ["", document.getFooters()],
-  ].filter(([, text]) => text.trim())
-  if (!sections.length)
-    throw new Error("The Word document has no previewable text.")
-  const content = sections
-    .map(
-      ([title, text]) =>
-        `${title ? `<h3>${escapeHtml(title)}</h3>` : ""}<div style="white-space:pre-wrap">${escapeHtml(text)}</div>`,
-    )
-    .join("\n")
-  return previewPage(
-    `<div class="notice">Legacy Word text preview. Download the original to see images and exact formatting.</div>${content}`,
-    "Word document preview",
-  )
 }

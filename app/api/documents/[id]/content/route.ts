@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server"
 import {
   PREVIEW_HTML_CSP,
-  readPreviewBuffer,
-  renderDocxPreview,
-  renderLegacyWordPreview,
   renderPreviewError,
 } from "@/lib/documents/word-preview"
 
 import { getDocumentDownloadUrl } from "@/lib/documents/get-document-download-url"
 import {
   isPreviewableDocumentContentType,
-  isDocxDocumentContentType,
   isWordDocumentContentType,
   normalizeDocumentContentType,
 } from "@/lib/documents/preview"
@@ -59,7 +55,7 @@ export async function GET(
     documentResponse = await fetch(result.downloadUrl, {
       headers: range ? { Range: range } : undefined,
       cache: "no-store",
-      signal: request.signal,
+      signal: AbortSignal.any([request.signal, AbortSignal.timeout(15_000)]),
     })
   } catch {
     return errorResponse("The document storage service is unavailable.", 503)
@@ -102,48 +98,11 @@ export async function GET(
   }
 
   if (isWordDocumentContentType(contentType)) {
-    // Conversion requires the whole archive; a browser's byte range is only meaningful for native previews.
-    if (documentResponse.status === 206) {
-      await documentResponse.body?.cancel()
-      try {
-        documentResponse = await fetch(result.downloadUrl, {
-          cache: "no-store",
-          signal: request.signal,
-        })
-      } catch {
-        return errorResponse(
-          "The document storage service is unavailable.",
-          503,
-        )
-      }
-      if (!documentResponse.ok)
-        return errorResponse(
-          "The document could not be loaded from storage.",
-          documentResponse.status,
-        )
-    }
-    const headers = {
-      "Cache-Control": "private, no-store",
-      "Content-Type": "text/html; charset=utf-8",
-      "Content-Security-Policy": PREVIEW_HTML_CSP,
-      "X-Content-Type-Options": "nosniff",
-      "X-Frame-Options": "SAMEORIGIN",
-      "Cross-Origin-Resource-Policy": "same-origin",
-    }
-    try {
-      const buffer = await readPreviewBuffer(documentResponse)
-      const html = isDocxDocumentContentType(contentType)
-        ? await renderDocxPreview(buffer)
-        : await renderLegacyWordPreview(buffer)
-      return new Response(html, { headers })
-    } catch {
-      return new Response(
-        renderPreviewError(
-          "This Word file could not be previewed. It may be damaged, password protected, or too large.",
-        ),
-        { status: 422, headers },
-      )
-    }
+    await documentResponse.body?.cancel()
+    return new Response(renderPreviewError("Download this Word document to open it. Inline Word previews are unavailable."), {
+      status: 415, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store",
+        "Content-Security-Policy": PREVIEW_HTML_CSP, "X-Content-Type-Options": "nosniff", "X-Frame-Options": "SAMEORIGIN" },
+    })
   }
 
   if (!isPreviewableDocumentContentType(contentType)) {

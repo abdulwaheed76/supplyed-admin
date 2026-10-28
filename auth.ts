@@ -135,6 +135,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        code: { label: "Authenticator or recovery code", type: "text" },
       },
       async authorize(credentials) {
         const result = await authenticateAdmin(credentials)
@@ -156,6 +157,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+  events: {
+    async signOut(message) {
+      if (!("token" in message) || !message.token?.refreshToken || !process.env.API_BASE_URL) return;
+      const url = `${process.env.API_BASE_URL.replace(/\/+$/, "")}/auth/logout`;
+      try {
+        const response = await fetch(url, { method: "POST", cache: "no-store", signal: AbortSignal.timeout(15_000),
+          headers: { "Content-Type": "application/json", ...(process.env.BFF_SHARED_SECRET ? { "X-SupplyEd-BFF": process.env.BFF_SHARED_SECRET } : {}) },
+          body: JSON.stringify({ refreshToken: message.token.refreshToken }) });
+        await response.body?.cancel();
+        if (!response.ok) throw new Error("Logout revocation failed");
+      } catch { console.error("Backend session revocation could not be completed during sign-out"); }
+    },
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {

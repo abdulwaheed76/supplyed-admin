@@ -5,7 +5,7 @@ import { z } from "zod"
 import { getAdminAccessToken } from "@/lib/auth/session"
 import { createAuthApiUrl, getAuthConfig } from "@/lib/auth/config"
 
-export type AdminApiFailure = { ok: false; message: string; status: number }
+export type AdminApiFailure = { ok: false; message: string; status: number; code?: string; requestId?: string }
 export type AdminApiResult<T> = { ok: true; data: T } | AdminApiFailure
 
 const errorResponseSchema = z.object({
@@ -57,6 +57,7 @@ type AdminApiRequestOptions<T> = {
   /** Names the upstream in transport-failure messages, e.g. `documents`. */
   serviceName?: string
   /** Enables request/response logging outside production. */
+  signal?: AbortSignal
   debugLabel?: string
 }
 
@@ -81,6 +82,7 @@ export async function adminApiRequest<T>({
   fallbackMessage = "The request could not be completed.",
   serviceName = "backend",
   debugLabel,
+  signal,
 }: AdminApiRequestOptions<T>): Promise<AdminApiResult<T>> {
   const token = await getAdminAccessToken()
 
@@ -131,6 +133,7 @@ export async function adminApiRequest<T>({
       method,
       headers: {
         Accept: "application/json",
+        ...(process.env.BFF_SHARED_SECRET ? { "X-SupplyEd-BFF": process.env.BFF_SHARED_SECRET } : {}),
         Authorization: `Bearer ${token.accessToken}`,
         ...(body === undefined
           ? {}
@@ -138,8 +141,11 @@ export async function adminApiRequest<T>({
       },
       body: body === undefined ? undefined : JSON.stringify(body),
       cache: "no-store",
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
     })
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && ["AbortError", "TimeoutError"].includes(error.name))
+      return { ok: false, message: "The request took too long. Please try again.", status: 504 };
     return {
       ok: false,
       message: `The ${serviceName} service is unavailable.`,
@@ -158,10 +164,13 @@ export async function adminApiRequest<T>({
   }
 
   if (!response.ok) {
+    const details = z.object({ code: z.string().optional(), meta: z.object({ requestId: z.string().optional() }).optional() }).safeParse(responseBody)
     return {
       ok: false,
       message: getApiErrorMessage(responseBody, fallbackMessage),
       status: response.status,
+      code: details.success ? details.data.code : undefined,
+      requestId: details.success ? details.data.meta?.requestId : undefined,
     }
   }
 

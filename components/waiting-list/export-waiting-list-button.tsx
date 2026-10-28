@@ -22,6 +22,7 @@ export function ExportWaitingListButton() {
     try {
       const response = await fetch("/api/contact/founding-interest/export", {
         headers: { Accept: "text/csv" },
+      signal: AbortSignal.timeout(15_000),
       })
 
       if (!response.ok) {
