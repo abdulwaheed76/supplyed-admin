@@ -3,7 +3,9 @@ import { z } from "zod"
 export const JOB_STATUSES = [
   "DRAFT",
   "ACTIVE",
+  "RESERVED",
   "EXPIRED",
+  "FILLED",
   "CLOSED",
   "SUSPENDED",
 ] as const

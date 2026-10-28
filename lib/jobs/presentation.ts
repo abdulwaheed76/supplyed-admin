@@ -3,7 +3,9 @@ import type { JobStatus } from "@/lib/jobs/schema"
 const statusLabels: Record<JobStatus, string> = {
   DRAFT: "Draft",
   ACTIVE: "Active",
+  RESERVED: "Reserved",
   EXPIRED: "Expired",
+  FILLED: "Filled",
   CLOSED: "Closed",
   SUSPENDED: "Suspended",
 }
