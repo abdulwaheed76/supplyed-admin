@@ -1,0 +1,99 @@
+name: Dev CI/CD
+
+on:
+  pull_request:
+    branches: [dev]
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+concurrency:
+  group: dev-${{ github.workflow }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Lint and build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+        env:
+          AUTH_SECRET: ci-only-secret-not-used-at-runtime
+
+  deploy:
+    name: Deploy to development server
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        shell: bash
+        env:
+          SSH_KEY: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.DEV_SERVER_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_KEY" || { echo "Missing DEV_SERVER_SSH_KEY secret"; exit 1; }
+          test -n "$SSH_KNOWN_HOSTS" || { echo "Missing DEV_SERVER_KNOWN_HOSTS secret"; exit 1; }
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Upload source to server
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.DEV_SERVER_HOST }}
+          SERVER_USER: ${{ secrets.DEV_SERVER_USER }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_HOST" || { echo "Missing DEV_SERVER_HOST secret"; exit 1; }
+          test -n "$SERVER_USER" || { echo "Missing DEV_SERVER_USER secret"; exit 1; }
+          ssh_target="${SERVER_USER}@${SERVER_HOST}"
+          tar \
+            --exclude='.git' \
+            --exclude='.next' \
+            --exclude='node_modules' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            -czf - . | ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ssh_target" \
+            "set -euo pipefail; app_root=\"\$HOME/supplyed\"; deploy_path=\"\$app_root/frontend-dev\"; release_path=\"\$deploy_path/releases/$GITHUB_SHA\"; mkdir -p \"\$deploy_path\" \"\$release_path\"; tar -xzf - -C \"\$release_path\"; cp \"\$release_path/deploy/docker-compose.dev.yml\" \"\$deploy_path/docker-compose.dev.yml\"; ln -sfn \"\$release_path\" \"\$deploy_path/current\""
+
+      - name: Build and restart frontend
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.DEV_SERVER_HOST }}
+          SERVER_USER: ${{ secrets.DEV_SERVER_USER }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_HOST" || { echo "Missing DEV_SERVER_HOST secret"; exit 1; }
+          test -n "$SERVER_USER" || { echo "Missing DEV_SERVER_USER secret"; exit 1; }
+          ssh_target="${SERVER_USER}@${SERVER_HOST}"
+          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ssh_target" \
+            "set -euo pipefail; app_root=\"\$HOME/supplyed\"; deploy_path=\"\$app_root/frontend-dev\"; cd \"\$deploy_path\"; test -L current || { echo \"Missing \$deploy_path/current release link\"; exit 1; }; test -f .env || { echo \"Missing \$deploy_path/.env\"; exit 1; }; for key in FRONTEND_PORT API_BASE_URL AUTH_SECRET AUTH_URL NEXT_PUBLIC_SITE_URL; do grep -q \"^\${key}=\" .env || { echo \"Missing \${key} in \$deploy_path/.env\"; exit 1; }; done; docker compose --env-file .env -f docker-compose.dev.yml build --pull frontend; docker compose --env-file .env -f docker-compose.dev.yml up -d --force-recreate --remove-orphans"

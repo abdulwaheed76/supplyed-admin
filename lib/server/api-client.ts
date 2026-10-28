@@ -1,0 +1,253 @@
+import "server-only";
+
+import { getServerAuthContext } from "./auth-context";
+import { getValidAccessToken, markBackendSessionExpired, refreshBackendAccessToken } from "./token-refresh";
+
+type QueryValue = boolean | number | string | null | undefined;
+
+type ApiQuery = Record<string, QueryValue | QueryValue[]>;
+
+type NextFetchOptions = {
+  revalidate?: false | number;
+  tags?: string[];
+};
+
+type ApiRequestOptions = {
+  auth?: boolean;
+  cache?: RequestCache;
+  headers?: HeadersInit;
+  timeoutMs?: number;
+  next?: NextFetchOptions;
+  query?: ApiQuery;
+};
+
+const DEFAULT_API_TIMEOUT_MS = 15_000;
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly payload?: unknown,
+    readonly code?: string,
+    readonly requestId?: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function isApiEnvelope(value: unknown): value is { data: unknown; message?: unknown; success?: unknown } {
+  return isRecord(value) && "data" in value && ("success" in value || "message" in value);
+}
+
+function readErrorMessage(payload: unknown, fallback: string) {
+  if (isApiEnvelope(payload) && typeof payload.message === "string" && payload.message.trim()) {
+    return payload.message;
+  }
+
+  if (isApiEnvelope(payload) && Array.isArray(payload.message)) {
+    const message = payload.message.filter((item): item is string => typeof item === "string" && Boolean(item.trim())).join(" ");
+    if (message) return message;
+  }
+
+  if (isRecord(payload) && typeof payload.message === "string" && payload.message.trim()) {
+    return payload.message;
+  }
+
+  if (isRecord(payload) && Array.isArray(payload.message)) {
+    const message = payload.message.filter((item): item is string => typeof item === "string" && Boolean(item.trim())).join(" ");
+    if (message) return message;
+  }
+
+  return fallback;
+}
+
+function readErrorCode(payload: unknown): string | undefined {
+  if (isApiEnvelope(payload)) {
+    if (isRecord(payload.data)) {
+      const nestedCode = readErrorCode(payload.data);
+      if (nestedCode) return nestedCode;
+    }
+
+    if (isRecord(payload.message)) {
+      const nestedCode = readErrorCode(payload.message);
+      if (nestedCode) return nestedCode;
+    }
+  }
+
+  if (isRecord(payload) && typeof payload.code === "string" && payload.code.trim()) {
+    return payload.code;
+  }
+
+  return undefined;
+}
+
+function isBackendAuthError(status: number, payload: unknown) {
+  const code = readErrorCode(payload);
+  return status === 401 || code === "ACCESS_TOKEN_EXPIRED" || code === "INVALID_ACCESS_TOKEN" || code === "AUTH_TOKEN_MISSING";
+}
+
+function unwrapApiPayload<Data>(payload: unknown): Data {
+  if (isApiEnvelope(payload)) return payload.data as Data;
+  return payload as Data;
+}
+
+function getApiBaseUrl() {
+  const baseUrl = process.env.API_BASE_URL;
+  if (!baseUrl) {
+    throw new Error("API_BASE_URL is not configured. Set it before connecting backend API calls.");
+  }
+
+  return baseUrl;
+}
+
+function appendQuery(url: URL, query?: ApiQuery) {
+  if (!query) return;
+
+  Object.entries(query).forEach(([key, value]) => {
+    if (Array.isArray(value)) {
+      value.forEach((item) => {
+        if (item !== null && item !== undefined) url.searchParams.append(key, String(item));
+      });
+      return;
+    }
+
+    if (value !== null && value !== undefined) url.searchParams.set(key, String(value));
+  });
+}
+
+function buildApiPath(basePath: string, path: string) {
+  const normalizedBasePath = basePath === "/" ? "" : basePath.replace(/\/+$/, "");
+  const normalizedPath = path.replace(/^\/+/, "");
+
+  return [normalizedBasePath, normalizedPath].filter(Boolean).join("/");
+}
+
+function buildUrl(path: string, query?: ApiQuery) {
+  const url = path.startsWith("http") ? new URL(path) : new URL(getApiBaseUrl());
+
+  if (!path.startsWith("http")) {
+    url.pathname = buildApiPath(url.pathname, path);
+    url.search = "";
+  }
+
+  appendQuery(url, query);
+  return url.toString();
+}
+
+function isAuthFailureStatus(status: number) {
+  return status === 401 || status === 302 || status === 307 || status === 308;
+}
+
+async function parseResponse(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (response.status === 204) return undefined;
+  if (contentType.includes("application/json")) return response.json();
+  return response.text();
+}
+
+async function request<Data>(
+  path: string,
+  init: RequestInit = {},
+  options: ApiRequestOptions = {},
+): Promise<Data> {
+  const authContext = options.auth === false ? null : await getServerAuthContext();
+  const accessToken = options.auth === false ? null : await getValidAccessToken(authContext);
+  const url = buildUrl(path, options.query);
+
+  if (options.auth !== false && authContext?.accessToken && !accessToken) {
+    throw new ApiError(
+      "Your session expired. Sign in again to continue.",
+      401,
+      { code: "SESSION_EXPIRED", message: "Your session expired. Sign in again to continue." },
+      "SESSION_EXPIRED",
+    );
+  }
+
+  function requestInit(token: string | null): RequestInit & { next?: NextFetchOptions } {
+    return {
+      ...init,
+      cache: options.cache,
+      headers: {
+        Accept: "application/json",
+        ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+        ...init.headers,
+      },
+      next: options.next,
+      redirect: "manual",
+      signal: init.signal ?? AbortSignal.timeout(options.timeoutMs ?? DEFAULT_API_TIMEOUT_MS),
+    } as RequestInit & { next?: NextFetchOptions };
+  }
+
+  let response = await fetch(url, requestInit(accessToken));
+
+  if (options.auth !== false && isAuthFailureStatus(response.status) && authContext?.refreshToken) {
+    const refreshed = await refreshBackendAccessToken(authContext.refreshToken);
+
+    if (refreshed?.accessToken) {
+      response = await fetch(url, requestInit(refreshed.accessToken));
+    } else {
+      throw new ApiError(
+        "Your session expired. Sign in again to continue.",
+        401,
+        { code: "SESSION_EXPIRED", message: "Your session expired. Sign in again to continue." },
+        "SESSION_EXPIRED",
+      );
+    }
+  }
+
+  const payload = await parseResponse(response);
+  const requestId = response.headers.get("X-Request-Id") ||
+    (isRecord(payload) && isRecord(payload.meta) && typeof payload.meta.requestId === "string" ? payload.meta.requestId : undefined);
+
+  if (!response.ok) {
+    if (options.auth !== false && isBackendAuthError(response.status, payload)) {
+      await markBackendSessionExpired();
+      throw new ApiError(
+        "Your session expired. Sign in again to continue.",
+        401,
+        { code: "SESSION_EXPIRED", message: "Your session expired. Sign in again to continue." },
+        "SESSION_EXPIRED",
+      );
+    }
+
+    throw new ApiError(
+      typeof payload === "string" && payload ? payload : readErrorMessage(payload, `Request failed with status ${response.status}`),
+      response.status,
+      payload,
+      readErrorCode(payload),
+      requestId,
+    );
+  }
+
+  return unwrapApiPayload<Data>(payload);
+}
+
+function bodyInit(body?: unknown) {
+  if (body === undefined) return undefined;
+  if (body instanceof FormData) return body;
+  return JSON.stringify(body);
+}
+
+export const api = {
+  delete: <Data>(path: string, options?: ApiRequestOptions) =>
+    request<Data>(path, { method: "DELETE" }, options),
+
+  get: <Data>(path: string, options?: ApiRequestOptions) =>
+    request<Data>(path, { method: "GET" }, options),
+
+  patch: <Data>(path: string, body?: unknown, options?: ApiRequestOptions) =>
+    request<Data>(path, { body: bodyInit(body), method: "PATCH" }, options),
+
+  post: <Data>(path: string, body?: unknown, options?: ApiRequestOptions) =>
+    request<Data>(path, { body: bodyInit(body), method: "POST" }, options),
+
+  put: <Data>(path: string, body?: unknown, options?: ApiRequestOptions) =>
+    request<Data>(path, { body: bodyInit(body), method: "PUT" }, options),
+};

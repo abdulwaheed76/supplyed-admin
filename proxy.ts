@@ -1,27 +1,102 @@
-import { auth } from "@/auth"
+import { getToken } from "next-auth/jwt";
+import { NextResponse, type NextRequest } from "next/server";
 
-/**
- * Route gating only. The `authorized` callback in `auth.ts` decides what passes;
- * this file exists to attach it to the matcher below.
- *
- * Resolving the session here also gives the `jwt` callback a context that can
- * persist a rotated token — Server Components cannot set cookies, so a refresh
- * triggered during render would be thrown away. Keeping the matcher ahead of
- * every authenticated route means the token is already fresh by the time a page
- * renders.
- */
-export const proxy = auth
+import { getAuthenticatedEntryHref, hasSubmittedApplicationStatus } from "./lib/routes";
+import type { AppRole, ApplicationStatus } from "./types/supplyed";
+
+const appRoles = new Set<AppRole>(["admin", "institution", "teacher"]);
+const appStatuses = new Set<ApplicationStatus>(["none", "pending_review", "approved", "rejected", "suspended"]);
+const guestOnlyRoutes = new Set(["/forgot-password", "/login", "/signup"]);
+
+function getAuthCookieSecret() {
+  return (
+    process.env.AUTH_SECRET ||
+    process.env.NEXTAUTH_SECRET ||
+    (process.env.NODE_ENV === "production" ? undefined : "supplyed-local-dev-auth-secret-change-before-production")
+  );
+}
+
+function shouldUseSecureAuthCookies() {
+  const authUrl = process.env.AUTH_URL || process.env.NEXTAUTH_URL;
+  if (authUrl) return authUrl.startsWith("https://");
+  return process.env.NODE_ENV === "production";
+}
+
+function redirectTo(request: NextRequest, pathname: string) {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  url.search = "";
+  return NextResponse.redirect(url);
+}
+
+function readAppRole(role: unknown): AppRole | null {
+  return typeof role === "string" && appRoles.has(role as AppRole) ? (role as AppRole) : null;
+}
+
+function readApplicationStatus(status: unknown): ApplicationStatus {
+  return typeof status === "string" && appStatuses.has(status as ApplicationStatus) ? (status as ApplicationStatus) : "none";
+}
+
+export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const isGuestOnlyRoute = guestOnlyRoutes.has(pathname);
+  const token = await getToken({
+    req: request,
+    secret: getAuthCookieSecret(),
+    secureCookie: shouldUseSecureAuthCookies(),
+  });
+
+  const userId = typeof token?.userId === "string" ? token.userId : token?.sub;
+
+  if (!userId) {
+    if (isGuestOnlyRoute) return NextResponse.next();
+    return redirectTo(request, "/login");
+  }
+
+  if (token?.appEmailVerified !== true) {
+    return redirectTo(request, "/post-auth");
+  }
+
+  const role = readAppRole(token.role);
+  const applicationStatus = readApplicationStatus(token.applicationStatus);
+  const setupComplete = role === "admin" || Boolean(role && hasSubmittedApplicationStatus(applicationStatus));
+  const isOnboardingRoute = pathname.startsWith("/onboarding");
+
+  if (isGuestOnlyRoute) {
+    return redirectTo(request, getAuthenticatedEntryHref({ applicationStatus, role }));
+  }
+
+  if (!setupComplete && !isOnboardingRoute) {
+    return redirectTo(request, "/onboarding");
+  }
+
+  if (role === "admin" && isOnboardingRoute) {
+    return redirectTo(request, "/dashboard");
+  }
+
+  // The onboarding server page checks live profile and document state. A JWT
+  // can still say approved after an admin has marked the profile incomplete.
+
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
+    "/applications/:path*",
+    "/billing/:path*",
+    "/calendar/:path*",
     "/dashboard/:path*",
-    "/api/contact/founding-interest/:path*",
-    "/api/document-requirements/:path*",
-    "/api/document-types/:path*",
-    "/api/documents/:path*",
-    "/api/institutions/:path*",
-    "/api/instructors/:path*",
-    "/api/jobs/:path*",
-    "/api/users/:path*",
+    "/find-jobs/:path*",
+    "/find-teachers/:path*",
+    "/forgot-password",
+    "/job-detail/:path*",
+    "/login",
+    "/messaging/:path*",
+    "/onboarding/:path*",
+    "/payouts/:path*",
+    "/post-job/:path*",
+    "/settings/:path*",
+    "/signup",
+    "/teacher-profile/:path*",
   ],
-}
+};

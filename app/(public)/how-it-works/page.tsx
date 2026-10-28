@@ -1,0 +1,179 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+
+import { PublicHeader } from "@/components/organisms/PublicHeader";
+import { buttonClassName, Icon, Tag } from "@/components/atoms";
+
+export const metadata: Metadata = {
+  title: "How It Works",
+  description: "A dummy end-to-end overview of how schools, multi-academy trusts, and supply teachers use SupplyED.",
+  alternates: {
+    canonical: "/how-it-works",
+  },
+};
+
+const schoolSteps = [
+  ["Post the role", "Add date, subject, rate, urgency, and compliance requirements."],
+  ["Review ranked matches", "SupplyED highlights available teachers based on profile fit and proximity."],
+  ["Message and confirm", "Schools contact preferred teachers, agree details, and keep a booking record."],
+];
+
+const teacherSteps = [
+  ["Create a profile", "Teachers add subjects, stages, experience, availability, and verification details."],
+  ["Receive matching jobs", "Relevant roles appear by urgency, distance, rate, and subject fit."],
+  ["Accept or propose", "Teachers can accept instant cover or apply to longer-term briefs."],
+];
+
+const matSteps = [
+  ["Add trust details", "The school selects the MAT path and records the trust name and company number."],
+  ["Request signatory approval", "SupplyED emails an authorised trust representative a secure approval link."],
+  ["Submit the school", "After approval, the school completes compliance documents and sends its profile for review."],
+];
+
+const workflow = [
+  { label: "Account", icon: "user", copy: "Schools and teachers choose their path when creating the account." },
+  { label: "Compliance", icon: "shield", copy: "DBS, right-to-work, identity, and safeguarding details are captured." },
+  { label: "Matching", icon: "search", copy: "Dummy matching ranks staff and roles using profile fit and availability." },
+  { label: "Booking", icon: "calendar", copy: "Messages, booking notes, and next actions stay in one workspace." },
+];
+
+const metrics = [
+  ["2 min", "to post urgent cover"],
+  ["94%", "dummy same-day fill rate"],
+  ["8.4k", "example verified teachers"],
+  ["4.9", "average teacher rating"],
+];
+
+export default function HowItWorksPage() {
+  const actionHref = "/signup";
+
+  return (
+    <div className="marketing-page marketing-how-it-works min-h-screen bg-chalk">
+      <PublicHeader active="how-it-works" />
+
+      <main>
+        <section className="marketing-hero marketing-founding-hero px-4 text-white sm:px-6 lg:px-12">
+          <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+            <div className="marketing-hero-copy">
+              <Tag>How it works</Tag>
+              <h1 className="mt-5 font-heading text-4xl leading-[1.05] sm:text-5xl lg:text-[64px]">
+                One workflow for cover, compliance, and confidence.
+              </h1>
+              <p className="mt-5 max-w-[650px] text-base leading-7 text-white/65 sm:text-lg">
+                Schools post staffing needs, MAT schools collect trust approval, teachers build trusted profiles, and each side moves through matching, messaging, and booking.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link className={buttonClassName({ className: "rounded-full px-6 py-3 text-white!" })} href={actionHref}>
+                  Start as school
+                </Link>
+                <Link
+                  className={buttonClassName({ variant: "secondary", className: "rounded-full px-6 py-3" })}
+                  href={actionHref}
+                  style={{ background: "transparent", borderColor: "rgba(255,255,255,0.28)", color: "#fff" }}
+                >
+                  Start as teacher
+                </Link>
+              </div>
+            </div>
+
+            <div className="marketing-process-metrics grid grid-cols-2 gap-3">
+              {metrics.map(([value, label]) => (
+                <div key={label} className="rounded-xl border border-white/10 bg-white/5 p-5">
+                  <div className="font-heading text-3xl">{value}</div>
+                  <div className="mt-2 text-xs uppercase tracking-[1px] text-white/45">{label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="px-4 py-14 sm:px-6 lg:px-12">
+          <div className="mx-auto max-w-[1180px]">
+            <div className="mb-8">
+              <div className="eyebrow">Workflow</div>
+              <h2 className="mt-2 font-heading text-3xl">The core journey</h2>
+            </div>
+
+            <div className="marketing-workflow-grid">
+              {workflow.map((item, index) => (
+                <article key={item.label} className="relative bg-white">
+                  <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-lg bg-brand-tint text-brand">
+                    <Icon name={item.icon} size={20} />
+                  </div>
+                  <div className="mb-2 text-xs font-bold uppercase tracking-[1px] text-muted">Step {index + 1}</div>
+                  <h3 className="font-heading text-xl">{item.label}</h3>
+                  <p className="mt-3 text-sm leading-6 text-muted">{item.copy}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-white px-4 py-14 sm:px-6 lg:px-12">
+          <div className="mx-auto grid max-w-[1180px] gap-5 lg:grid-cols-3">
+            <article className="marketing-journey-card">
+              <Tag>For schools</Tag>
+              <h2 className="mt-4 font-heading text-3xl">Fill cover without agency complexity.</h2>
+              <div className="mt-6 space-y-5">
+                {schoolSteps.map(([title, copy], index) => (
+                  <div key={title} className="flex gap-4">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">{index + 1}</div>
+                    <div>
+                      <h3 className="font-semibold">{title}</h3>
+                      <p className="mt-1 text-sm leading-6 text-muted">{copy}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="marketing-journey-card">
+              <Tag tone="purple">For teachers</Tag>
+              <h2 className="mt-4 font-heading text-3xl">Turn one profile into matched opportunities.</h2>
+              <div className="mt-6 space-y-5">
+                {teacherSteps.map(([title, copy], index) => (
+                  <div key={title} className="flex gap-4">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-purple text-xs font-bold text-white">{index + 1}</div>
+                    <div>
+                      <h3 className="font-semibold">{title}</h3>
+                      <p className="mt-1 text-sm leading-6 text-muted">{copy}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="marketing-journey-card">
+              <Tag tone="green">For MAT schools</Tag>
+              <h2 className="mt-4 font-heading text-3xl">Join through your trust with recorded approval.</h2>
+              <div className="mt-6 space-y-5">
+                {matSteps.map(([title, copy], index) => (
+                  <div key={title} className="flex gap-4">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success text-xs font-bold text-white">{index + 1}</div>
+                    <div>
+                      <h3 className="font-semibold">{title}</h3>
+                      <p className="mt-1 text-sm leading-6 text-muted">{copy}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section className="px-4 py-14 sm:px-6 lg:px-12">
+          <div className="marketing-next-step mx-auto flex max-w-[1180px] flex-col gap-5 bg-white md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="eyebrow">Next step</div>
+              <h2 className="mt-2 font-heading text-3xl">Create a workspace and test the full flow.</h2>
+            </div>
+            <Link className={buttonClassName({ className: "rounded-full px-6 py-3 text-white!" })} href={actionHref}>
+              Get started
+            </Link>
+          </div>
+        </section>
+      </main>
+
+    </div>
+  );
+}

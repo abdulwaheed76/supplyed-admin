@@ -1,0 +1,364 @@
+import Link from "next/link";
+import type { CSSProperties, ReactNode } from "react";
+
+import { buttonClassName, Icon, Tag } from "@/components/atoms";
+
+import { FoundingInterestForm } from "./FoundingInterestForm";
+import {
+  FoundingSchoolCohortSection,
+  FoundingSchoolFaqSection,
+  FoundingSchoolTiersSection,
+  FoundingSchoolTrustStrip,
+} from "./FoundingSchoolSections";
+import {
+  FoundingTeacherFaqSection,
+  FoundingTeacherRegionsSection,
+  FoundingTeacherRolesSection,
+  FoundingTeacherTrustStrip,
+} from "./FoundingTeacherSections";
+import { PublicHeader } from "./PublicHeader";
+import { WaitlistSchoolIntro } from "./WaitlistSchoolIntro";
+import { WaitlistTeacherIntro } from "./WaitlistTeacherIntro";
+
+type FoundingInterestType = "SCHOOL" | "TEACHER";
+
+type FoundingInterestPageProps = {
+  campaign?: string;
+  source?: string;
+  type: FoundingInterestType;
+};
+
+type PageContent = {
+  accent: string;
+  benefits: Array<{ copy: string; icon: string; title: string }>;
+  ctaCopy: string;
+  ctaTitle: string;
+  formBadge: string;
+  formBullets: Array<{ copy: string; title: string }>;
+  heroCopy: string;
+  heroEyebrow: string;
+  heroTitle: ReactNode;
+  howItWorksSubtitle: string;
+  howItWorksTitle: string;
+  primaryCta: string;
+  programmeSubtitle: string;
+  programmeTitle: string;
+  rightCardCopy: string;
+  rightCardRows: Array<{ copy: string; icon: string; title: string }>;
+  secondaryCta: string;
+  steps: Array<{ copy: string; title: string }>;
+  stats?: ReadonlyArray<readonly [string, string]>;
+};
+
+const schoolContent: PageContent = {
+  accent: "var(--se)",
+  benefits: [
+    {
+      copy: "Your founding processing fee is fixed in writing for two years, before standard terms open more widely.",
+      icon: "pound",
+      title: "Founding terms, locked",
+    },
+    {
+      copy: "Cover coordinators and SLT get monthly input sessions that shape the roadmap before general launch.",
+      icon: "message",
+      title: "Direct line to the founder",
+    },
+    {
+      copy: "Founding schools are onboarded, trained, and live before general availability opens.",
+      icon: "zap",
+      title: "Priority access at launch",
+    },
+  ],
+  ctaCopy: "Be one of the 20 founding schools shaping SupplyED across Greater Manchester and Lancashire.",
+  ctaTitle: "Ready to transform your staffing?",
+  formBadge: "Founding schools programme",
+  formBullets: [
+    { title: "Founding terms, locked for 2 years", copy: "your launch rate never rises while you stay with us." },
+    { title: "Direct line to the founder", copy: "monthly input sessions that shape the roadmap." },
+    { title: "Priority access at launch", copy: "your roles reach verified teachers first." },
+    { title: "No commitment", copy: "registering interest starts a conversation, nothing more." },
+  ],
+  heroCopy:
+    "SupplyED is a compliance-first marketplace connecting UK schools directly with verified supply teachers. Before launch, we are inviting a founding cohort of 20 schools across Greater Manchester and Lancashire to lock in founding terms and shape the platform with us.",
+  heroEyebrow: "Founding Schools Programme - capped at 20 schools",
+  heroTitle: (
+    <>
+      Twenty schools will shape how supply cover works.
+      <br />
+      <em className="text-brand">Yours can be one.</em>
+    </>
+  ),
+  howItWorksSubtitle: "Registrations are reviewed in order received before we confirm places.",
+  howItWorksTitle: "Three simple steps before launch.",
+  primaryCta: "Reserve Your School's Place",
+  programmeSubtitle: "Both tiers are founding places within the cap of 20.",
+  programmeTitle: "What founding schools get",
+  rightCardCopy:
+    "The founding cohort is deliberately small, reviewed in order received, and built around real school-cover needs.",
+  rightCardRows: [
+    { copy: "Founding fee lock, early onboarding, and roadmap input.", icon: "building", title: "Schools & MATs" },
+    { copy: "Verified teacher profiles and document-backed compliance signals.", icon: "shield", title: "Compliance-ready cover" },
+    { copy: "Urgent cover, planned briefs, and learner support from one workspace.", icon: "calendar", title: "Real staffing workflows" },
+  ],
+  secondaryCta: "See what founding schools get",
+  steps: [
+    { title: "Register your interest", copy: "Tell us about your school. Registrations are reviewed in the order they arrive." },
+    { title: "Intro call", copy: "A short call to walk through the programme, founding terms, and your cover needs." },
+    { title: "Confirm your place", copy: "If it is a fit, we confirm your place in writing and onboard you before launch." },
+  ],
+  stats: [
+    ["20", "Founding places"],
+    ["2 years", "Terms locked"],
+    ["Priority", "Launch access"],
+    ["No fee", "To register"],
+  ],
+};
+
+const teacherContent: PageContent = {
+  accent: "var(--se)",
+  benefits: [
+    {
+      copy: "An extra GBP 5 per day on your bookings through SupplyED, locked in for 18 months from launch.",
+      icon: "pound",
+      title: "Founding rate uplift",
+    },
+    {
+      copy: "SupplyED covers Enhanced DBS and compliance checks for founding members before marketplace activation.",
+      icon: "shield",
+      title: "Your checks, on us",
+    },
+    {
+      copy: "Verified founding profiles are live first, so schools see you as soon as roles start opening.",
+      icon: "star",
+      title: "First in line for roles",
+    },
+  ],
+  ctaCopy: "Register interest in the founding teacher programme across Greater Manchester, Lancashire, and the North.",
+  ctaTitle: "Be verified before anyone else is looking.",
+  formBadge: "Founding teachers programme - the North first",
+  formBullets: [
+    { title: "+GBP 5 per day for 18 months", copy: "the founding uplift on your SupplyED bookings." },
+    { title: "DBS and checks covered", copy: "verification costs are covered for founding members." },
+    { title: "Live from day one", copy: "schools see your verified profile the moment we launch." },
+    { title: "All cover roles welcome", copy: "teachers, TAs, HLTAs, SEN specialists, and cover supervisors." },
+  ],
+  heroCopy:
+    "SupplyED is a compliance-first marketplace that introduces you directly to schools. No agency margin sits between you and your day rate. Register interest before launch and we will contact you about founding-teacher access.",
+  heroEyebrow: "Founding Teachers Programme - now open",
+  heroTitle: (
+    <>
+      Work directly with schools.
+      <br />
+      <em className="text-brand">Keep what you earn.</em>
+    </>
+  ),
+  howItWorksSubtitle: "Registering takes two minutes and costs nothing.",
+  howItWorksTitle: "How joining works.",
+  primaryCta: "Apply for Founding Status",
+  programmeSubtitle: "Founding benefits are for the first cohort only.",
+  programmeTitle: "Why join before launch",
+  rightCardCopy:
+    "SupplyED keeps your profile, availability, verification, and placement history connected before launch.",
+  rightCardRows: [
+    { copy: "Supply teachers, ECTs, HLTAs, TAs, SEN specialists, and cover supervisors.", icon: "users", title: "All cover roles" },
+    { copy: "Greater Manchester and Lancashire first, with nearby northern regions close behind.", icon: "pin", title: "North-first launch" },
+    { copy: "Each booking is direct between you and the school, with no agency margin between.", icon: "checkCircle", title: "Direct engagement" },
+  ],
+  secondaryCta: "See founding benefits",
+  steps: [
+    { title: "Register your interest", copy: "Share your contact details, role, and teaching phase. No account is needed." },
+    { title: "Get verified, on us", copy: "Before launch, founding members complete the full safer-recruitment check set." },
+    { title: "Go live at launch", copy: "Your verified profile is live from day one with founding benefits noted." },
+  ],
+};
+
+function contentFor(type: FoundingInterestType) {
+  return type === "TEACHER" ? teacherContent : schoolContent;
+}
+
+function themedCardStyle(color: string): CSSProperties {
+  return {
+    borderColor: "var(--border)",
+    borderTop: `3px solid ${color}`,
+  };
+}
+
+export function FoundingInterestPage({ campaign, source, type }: FoundingInterestPageProps) {
+  const content = contentFor(type);
+  const registrationAnchorId = type === "SCHOOL" ? "school-registration" : "teacher-registration";
+  const registrationFormId = `${registrationAnchorId}-form`;
+
+  return (
+    <div className="marketing-page marketing-founding bg-white">
+      <PublicHeader active={type === "SCHOOL" ? "founding-schools" : "founding-teachers"} />
+
+      <main>
+      <section className="marketing-hero marketing-founding-hero">
+        <div
+          className="supplyed-content-wrap marketing-hero-grid"
+        >
+          <div className="marketing-hero-copy">
+            <div className="marketing-announcement"><span aria-hidden="true" />{content.heroEyebrow}</div>
+            <h1>{content.heroTitle}</h1>
+            <p className="mb-8 mt-5 max-w-[590px] text-base leading-[1.7] text-white/70 sm:mb-9 sm:mt-6 sm:text-[17px]">
+              {content.heroCopy}
+            </p>
+            <div className="marketing-hero-actions">
+              <Link className={buttonClassName({ size: "xl" })} href={`#${registrationAnchorId}`}>
+                {content.primaryCta}
+              </Link>
+              <Link
+                className={buttonClassName({ variant: "secondary", size: "xl", className: "marketing-button-light" })}
+                href="#programme"
+              >
+                {content.secondaryCta}
+              </Link>
+            </div>
+            {content.stats ? (
+              <div className="marketing-founding-stats">
+                {content.stats.map(([value, label]) => (
+                  <div key={label}>
+                    <div className="font-heading text-[28px]">{value}</div>
+                    <div className="text-xs uppercase tracking-[1px] text-white/50">{label}</div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <aside className="marketing-founding-aside">
+            <div className="relative">
+              <div className="marketing-aside-label"><Icon name="shield" size={18} /> Verified marketplace</div>
+              <h2 className="mt-2 max-w-[410px] font-heading text-3xl leading-[1.04] sm:text-[38px]">
+                The right teacher, right now.
+              </h2>
+              <p className="mt-3 max-w-[440px] text-sm leading-6 text-muted">{content.rightCardCopy}</p>
+
+              <div className="mt-6 grid gap-3">
+                {content.rightCardRows.map((row, index) => (
+                  <div key={row.title} className="marketing-founding-row grid grid-cols-[auto_1fr] items-start gap-3 border-b border-border pb-3 last:border-b-0 last:pb-0">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-chalk text-brand">
+                      <Icon name={row.icon} size={21} />
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-muted">0{index + 1}</span>
+                        <h3 className="font-semibold">{row.title}</h3>
+                      </div>
+                      <p className="mt-0.5 text-sm leading-6 text-muted">{row.copy}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 rounded-lg border border-brand/20 bg-brand-tint p-4">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-white text-brand">
+                    <Icon name="check" size={18} />
+                  </span>
+                  <div>
+                    <div className="font-semibold text-brand-dark">Safer checks before activation</div>
+                    <p className="mt-1 text-sm leading-6 text-muted">
+                      Enhanced DBS, identity, right-to-work, profile review, ratings, and role status stay connected before marketplace access.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      {type === "SCHOOL" ? (
+        <>
+          <FoundingSchoolTrustStrip />
+          <FoundingSchoolCohortSection />
+        </>
+      ) : null}
+
+      {type === "TEACHER" ? <FoundingTeacherTrustStrip /> : null}
+
+      <section id="programme" className="marketing-section bg-white px-4 py-14 sm:px-6 sm:py-16 lg:px-12 lg:py-[72px]">
+        <div className="mx-auto max-w-[1200px]">
+          <div className="marketing-section-intro mb-10">
+            <div className="eyebrow">{content.formBadge}</div>
+            <h2 className="mt-2.5 font-heading text-3xl sm:text-4xl">{content.programmeTitle}</h2>
+            <p className="mt-2 text-muted">{content.programmeSubtitle}</p>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-3">
+            {content.benefits.map((benefit) => (
+              <article key={benefit.title} className="marketing-benefit-card card card-pad-lg" style={themedCardStyle(content.accent)}>
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-tint text-brand">
+                  <Icon name={benefit.icon} size={24} />
+                </div>
+                <h3 className="font-heading text-2xl leading-tight">{benefit.title}</h3>
+                <p className="mt-3 text-sm leading-6 text-muted">{benefit.copy}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {type === "SCHOOL" ? <FoundingSchoolTiersSection /> : null}
+
+      {type === "TEACHER" ? (
+        <>
+          <FoundingTeacherRolesSection />
+          <FoundingTeacherRegionsSection />
+        </>
+      ) : null}
+
+      <section className="marketing-steps-section border-y border-border bg-chalk px-4 py-14 sm:px-6 sm:py-16 lg:px-12 lg:py-[72px]">
+        <div className="mx-auto max-w-[1120px]">
+          <div className="mb-10 text-center">
+            <div className="eyebrow">How it works</div>
+            <h2 className="mt-2.5 font-heading text-3xl sm:text-4xl">{content.howItWorksTitle}</h2>
+            <p className="mx-auto mt-2 max-w-[620px] text-muted">{content.howItWorksSubtitle}</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {content.steps.map((step, index) => (
+              <div key={step.title} className="marketing-step-card">
+                <span className="marketing-step-number">
+                  0{index + 1}
+                </span>
+                <h3 className="font-heading text-xl leading-tight">{step.title}</h3>
+                <p className="mt-3 text-sm leading-6 text-muted">{step.copy}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {type === "SCHOOL" ? <FoundingSchoolFaqSection /> : null}
+      {type === "TEACHER" ? <FoundingTeacherFaqSection /> : null}
+
+      <div id="register" className="h-0 scroll-mt-24" aria-hidden="true" />
+      <section id={registrationAnchorId} className={`marketing-registration marketing-section scroll-mt-24 ${type === "TEACHER" ? "waitlist-teacher-registration" : "bg-white"}`}>
+        <div
+          className="supplyed-content-wrap marketing-registration-grid marketing-registration-grid-long waitlist-registration-grid"
+        >
+          {type === "SCHOOL" ? <WaitlistSchoolIntro /> : <WaitlistTeacherIntro />}
+
+          <FoundingInterestForm campaign={campaign} id={registrationFormId} key={type} source={source} type={type} />
+        </div>
+      </section>
+
+      <section className="marketing-share-section border-t border-border px-4 py-14 sm:px-6 sm:py-16 lg:px-12">
+        <div className="mx-auto max-w-[820px]">
+          <Tag className="mb-5">QR-ready page</Tag>
+          <h2 className="font-heading text-4xl leading-[1.05] sm:text-5xl">Share this page from events, flyers, and email.</h2>
+          <p className="mx-auto mt-5 max-w-[560px] text-base leading-7 text-muted">
+            Use the page URL directly in QR codes. Add source and campaign query strings when you need attribution.
+          </p>
+          <div className="mt-8">
+            <Link className={buttonClassName({ size: "xl", className: "rounded-full px-8" })} href="#register">
+              Register interest
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      </main>
+    </div>
+  );
+}

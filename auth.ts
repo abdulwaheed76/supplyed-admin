@@ -1,256 +1,322 @@
-import NextAuth from "next-auth"
-import { CredentialsSignin } from "next-auth"
-import Credentials from "next-auth/providers/credentials"
-import type { JWT } from "next-auth/jwt"
-import { NextResponse } from "next/server"
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
+import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 
-import { authenticateAdmin } from "@/lib/auth/authenticate"
-import {
-  CALLBACK_URL_COOKIE_NAME,
-  CSRF_COOKIE_NAME,
-  SESSION_COOKIE_NAME,
-  USE_SECURE_AUTH_COOKIES,
-} from "@/lib/auth/cookies"
-import type { SignInErrorCode } from "@/lib/auth/errors"
-import { refreshAdminSession } from "@/lib/auth/refresh"
+import { exchangeOAuthAccount, loginWithEmail, normalizeRole, normalizeStatus, verifyEmail } from "@/features/auth/backend";
+import { readUnknownSocialAuthErrorMessage } from "@/features/auth/error-messages";
+import { validateEmail } from "@/features/auth/schemas";
+import { readVerifiedEmailSessionTicket } from "@/features/auth/session-ticket";
+import type { BackendAuthResponse } from "@/features/auth/types";
+import { readUnverifiedJwtExpiresAt, readUnverifiedJwtPayload } from "@/lib/server/jwt";
+import { cookies } from "next/headers";
 
-/**
- * How far ahead of true expiry the proxy rotates the access token.
- *
- * This needs to be generous, not just clock-skew sized. When the proxy
- * refreshes, the rotated cookie goes out on the *response* — the Server
- * Components rendering that same request still read the previous token. That
- * token has to stay valid for the whole render, so the lead time is the budget
- * for it. Two minutes leaves ample room for a slow page without shortening the
- * effective session.
- */
-const ACCESS_TOKEN_SKEW_MS = 120_000
+export const authSecret =
+  process.env.AUTH_SECRET ||
+  process.env.NEXTAUTH_SECRET ||
+  (process.env.NODE_ENV === "production" ? undefined : "supplyed-local-dev-auth-secret-change-before-production");
 
-/** Upper bound on the Auth.js cookie. The real cutoff is `refreshTokenExpiresAt`. */
-const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60
-
-class SignInError extends CredentialsSignin {
-  constructor(readonly code: SignInErrorCode) {
-    super(code)
-  }
+function readEnv(key: string) {
+  const value = process.env[key]?.trim();
+  return value || undefined;
 }
 
-/**
- * How long a completed refresh stays replayable for the same input token.
- *
- * The `jwt` callback runs more than once per browser request — the proxy
- * resolves the session, then each Server Component that calls `auth()` resolves
- * it again from the *original* request cookie, since the proxy's rotated cookie
- * only reaches the browser on the response. Without this cache each of those
- * would hit `auth/refresh` separately, and because the backend rotates refresh
- * tokens, every rotation after the first would be discarded: the browser would
- * end up holding a token the backend had already retired.
- *
- * Caching the result keyed on the token that was consumed makes all of those
- * callers agree on one rotation. It also collapses genuinely concurrent
- * refreshes, which would race the same way.
- *
- * This is per server instance. Across instances (or during a rolling deploy)
- * two refreshes can still race, so the backend should tolerate a short reuse
- * window on a just-rotated refresh token.
- */
-const REFRESH_CACHE_TTL_MS = 60_000
+function readCredential(credentials: Partial<Record<string, unknown>> | undefined, key: string) {
+  return String(credentials?.[key] ?? "");
+}
 
-const refreshCache = new Map<
-  string,
-  { result: Promise<JWT>; expiresAt: number }
->()
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
 
-async function refreshSessionToken(token: JWT): Promise<JWT> {
-  const now = Date.now()
+function readString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
 
-  for (const [key, entry] of refreshCache) {
-    if (entry.expiresAt <= now) {
-      refreshCache.delete(key)
-    }
+function readNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function toAuthUser(response: BackendAuthResponse) {
+  const user = response.user;
+
+  return {
+    accessToken: response.accessToken,
+    accessTokenExpiresAt: response.accessTokenExpiresAt,
+    appEmailVerified: user.emailVerified,
+    applicationStatus: user.applicationStatus,
+    email: user.email,
+    id: user.id,
+    instructorProfileId: user.instructorProfileId,
+    institutionProfileId: user.institutionProfileId,
+    name: user.name ?? user.email.split("@")[0],
+    refreshToken: response.refreshToken,
+    role: normalizeRole(user.role),
+  };
+}
+
+function assignBackendSession(token: Record<string, unknown>, response: BackendAuthResponse) {
+  token.userId = response.user.id;
+  token.role = normalizeRole(response.user.role);
+  token.applicationStatus = normalizeStatus(response.user.applicationStatus);
+  token.appEmailVerified = response.user.emailVerified;
+  token.instructorProfileId = response.user.instructorProfileId;
+  token.institutionProfileId = response.user.institutionProfileId;
+  if (response.accessToken) token.accessToken = response.accessToken;
+  if (response.refreshToken) token.refreshToken = response.refreshToken;
+  if (response.accessTokenExpiresAt) token.accessTokenExpiresAt = response.accessTokenExpiresAt;
+  delete token.backendAuthError;
+  delete token.backendAuthErrorMessage;
+  delete token.backendAuthErrorProvider;
+}
+
+function assignBackendAuthError(token: Record<string, unknown>, provider: string, error: unknown) {
+  token.backendAuthError = "OAuthBackendExchangeError";
+  token.backendAuthErrorMessage = readUnknownSocialAuthErrorMessage(error, "Social sign-in failed. Try again.");
+  token.backendAuthErrorProvider = provider;
+  token.appEmailVerified = false;
+  delete token.accessToken;
+  delete token.accessTokenExpiresAt;
+  delete token.refreshToken;
+  delete token.role;
+  delete token.applicationStatus;
+  delete token.instructorProfileId;
+  delete token.institutionProfileId;
+}
+
+function assignRefreshAuthError(token: Record<string, unknown>, message = "Your session expired. Sign in again to continue.") {
+  token.backendAuthError = "RefreshAccessTokenError";
+  token.backendAuthErrorMessage = message;
+  delete token.accessToken;
+  delete token.accessTokenExpiresAt;
+  delete token.refreshToken;
+}
+
+function clearBackendAuthError(token: Record<string, unknown>) {
+  delete token.backendAuthError;
+  delete token.backendAuthErrorMessage;
+  delete token.backendAuthErrorProvider;
+}
+
+function readJwtSubject(payload: Record<string, unknown> | undefined) {
+  return readString(payload?.sub);
+}
+
+function readJwtTokenKind(payload: Record<string, unknown> | undefined): "access" | "refresh" | undefined {
+  const rawKind =
+    readString(payload?.tokenType) ??
+    readString(payload?.token_type) ??
+    readString(payload?.tokenUse) ??
+    readString(payload?.token_use) ??
+    readString(payload?.type) ??
+    readString(payload?.typ) ??
+    readString(payload?.kind);
+  const kind = rawKind?.replace(/[\s_-]/g, "").toLowerCase();
+
+  if (kind === "access" || kind === "accesstoken") return "access";
+  if (kind === "refresh" || kind === "refreshtoken") return "refresh";
+
+  return undefined;
+}
+
+function hasUnexpectedJwtTokenKind(payload: Record<string, unknown> | undefined, expected: "access" | "refresh") {
+  const kind = readJwtTokenKind(payload);
+  return Boolean(kind && kind !== expected);
+}
+
+function canApplyBackendTokenUpdate(token: Record<string, unknown>, accessToken: string, refreshToken?: string) {
+  const userId = readString(token.userId) ?? readString(token.sub);
+  const accessPayload = readUnverifiedJwtPayload(accessToken);
+  const refreshPayload = refreshToken ? readUnverifiedJwtPayload(refreshToken) : undefined;
+
+  if (!userId || readJwtSubject(accessPayload) !== userId || hasUnexpectedJwtTokenKind(accessPayload, "access")) return false;
+  if (refreshToken && (readJwtSubject(refreshPayload) !== userId || hasUnexpectedJwtTokenKind(refreshPayload, "refresh"))) return false;
+
+  return true;
+}
+
+function applyBackendSessionUpdate(token: Record<string, unknown>, session: unknown) {
+  const update = isRecord(session) && isRecord(session.backendAuthUpdate) ? session.backendAuthUpdate : null;
+  const type = readString(update?.type);
+
+  if (type === "expired") {
+    assignRefreshAuthError(token, readString(update?.message));
+    return;
   }
 
-  const cached = refreshCache.get(token.refreshToken)
+  if (type !== "refresh") return;
 
-  if (cached) {
-    return cached.result
-  }
+  const accessToken = readString(update?.accessToken);
+  const refreshToken = readString(update?.refreshToken);
+  if (!accessToken || !canApplyBackendTokenUpdate(token, accessToken, refreshToken)) return;
 
-  const refreshing = (async (): Promise<JWT> => {
-    const result = await refreshAdminSession(token.refreshToken)
+  token.accessToken = accessToken;
+  if (refreshToken) token.refreshToken = refreshToken;
+  token.accessTokenExpiresAt = readNumber(update?.accessTokenExpiresAt) ?? readUnverifiedJwtExpiresAt(accessToken);
+  clearBackendAuthError(token);
+}
 
-    if (!result.ok) {
-      // A 5xx means the auth service is down, not that the session is invalid.
-      // Keep the token so the next request can retry instead of forcing a
-      // sign-out on a transient outage.
-      if (result.status >= 500) {
-        return token
+const googleClientId = readEnv("AUTH_GOOGLE_ID");
+const googleClientSecret = readEnv("AUTH_GOOGLE_SECRET");
+const microsoftClientId = readEnv("AUTH_MICROSOFT_ENTRA_ID_ID");
+const microsoftClientSecret = readEnv("AUTH_MICROSOFT_ENTRA_ID_SECRET");
+const microsoftIssuer = readEnv("AUTH_MICROSOFT_ENTRA_ID_ISSUER");
+
+const socialProviders = [
+  ...(googleClientId && googleClientSecret
+    ? [
+        Google({
+          authorization: {
+            params: {
+              access_type: "offline",
+              prompt: "consent",
+              response_type: "code",
+            },
+          },
+          clientId: googleClientId,
+          clientSecret: googleClientSecret,
+        }),
+      ]
+    : []),
+  ...(microsoftClientId && microsoftClientSecret
+    ? [
+        MicrosoftEntraID({
+          clientId: microsoftClientId,
+          clientSecret: microsoftClientSecret,
+          issuer: microsoftIssuer,
+        }),
+      ]
+    : []),
+];
+
+export const {
+  auth,
+  handlers: { GET, POST },
+  signIn,
+  signOut,
+  unstable_update: updateAuthSession,
+} = NextAuth({
+  callbacks: {
+    async jwt({ account, session, token, trigger, user }) {
+      if (trigger === "update") {
+        applyBackendSessionUpdate(token, session);
       }
 
-      return { ...token, error: "RefreshFailed" as const }
-    }
+      if (user) {
+        token.userId = user.id;
+        token.role = normalizeRole(user.role);
+        token.applicationStatus = normalizeStatus(user.applicationStatus);
+        token.appEmailVerified = Boolean(user.appEmailVerified);
+        token.accessToken = user.accessToken;
+        token.refreshToken = user.refreshToken;
+        token.accessTokenExpiresAt = user.accessTokenExpiresAt;
+        token.instructorProfileId = user.instructorProfileId;
+        token.institutionProfileId = user.institutionProfileId;
+      }
 
-    return {
-      ...token,
-      id: result.user.id,
-      email: result.user.email,
-      name: result.user.name,
-      role: result.user.role,
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-      accessTokenExpiresAt: Date.now() + result.accessTokenExpiresIn * 1000,
-      refreshTokenExpiresAt: Date.now() + result.refreshTokenExpiresIn * 1000,
-      error: undefined,
-    }
-  })()
+      if (account && account.provider !== "credentials") {
+        const email = String(user?.email ?? token.email ?? "").trim().toLowerCase();
+        const provider = account.provider === "microsoft-entra-id" ? "microsoft-entra-id" : "google";
 
-  refreshCache.set(token.refreshToken, {
-    result: refreshing,
-    expiresAt: now + REFRESH_CACHE_TTL_MS,
-  })
+        if (!validateEmail(email)) {
+          assignBackendAuthError(token, provider, "The social provider did not return a valid email address.");
+          return token;
+        }
 
-  // A failed refresh must not be replayed from cache: the next request should
-  // be free to try again rather than inherit a transient outage.
-  refreshing.catch(() => refreshCache.delete(token.refreshToken))
+        try {
+          const cookieStore = await cookies();
+          const requestedRole = normalizeRole(cookieStore.get("supplyed_signup_role")?.value);
+          const signupRole = requestedRole === "teacher" || requestedRole === "institution" ? requestedRole : null;
+          cookieStore.delete("supplyed_signup_role");
+          const response = await exchangeOAuthAccount({
+            email,
+            image: user?.image ?? token.picture ?? null,
+            name: user?.name ?? token.name ?? null,
+            provider,
+            providerAccessToken: account.access_token,
+            providerAccountId: account.providerAccountId,
+            providerIdToken: account.id_token,
+            role: signupRole,
+          });
 
-  return refreshing
-}
+          assignBackendSession(token, response);
+        } catch (error) {
+          assignBackendAuthError(token, provider, error);
+        }
+      }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  trustHost: true,
-  session: { strategy: "jwt", maxAge: SESSION_MAX_AGE_SECONDS },
-  pages: { signIn: "/login", error: "/login" },
-  useSecureCookies: USE_SECURE_AUTH_COOKIES,
-  cookies: {
-    sessionToken: {
-      name: SESSION_COOKIE_NAME,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: USE_SECURE_AUTH_COOKIES,
-      },
+      return token;
     },
-    // Renamed for the same reason as the session cookie (see
-    // lib/auth/cookies.ts). Under the default names the frontend could
-    // overwrite this app's CSRF cookie between the login form loading and
-    // being submitted, failing the sign-in with a CSRF mismatch.
-    csrfToken: {
-      name: CSRF_COOKIE_NAME,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: USE_SECURE_AUTH_COOKIES,
-      },
+    async redirect({ baseUrl, url }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+
+      const nextUrl = new URL(url);
+      if (nextUrl.origin === baseUrl) return url;
+
+      return `${baseUrl}/post-auth`;
     },
-    callbackUrl: {
-      name: CALLBACK_URL_COOKIE_NAME,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: USE_SECURE_AUTH_COOKIES,
-      },
+    async session({ session, token }) {
+      session.user.id = String(token.userId ?? token.sub ?? "");
+      session.user.role = normalizeRole(token.role);
+      session.user.applicationStatus = normalizeStatus(token.applicationStatus);
+      session.user.isEmailVerified = Boolean(token.appEmailVerified);
+      session.user.instructorProfileId =
+        typeof token.instructorProfileId === "string" ? token.instructorProfileId : undefined;
+      session.user.institutionProfileId =
+        typeof token.institutionProfileId === "string" ? token.institutionProfileId : undefined;
+      session.user.authErrorMessage =
+        typeof token.backendAuthErrorMessage === "string" ? token.backendAuthErrorMessage : undefined;
+      session.user.authErrorProvider =
+        typeof token.backendAuthErrorProvider === "string" ? token.backendAuthErrorProvider : undefined;
+      return session;
     },
+  },
+  pages: {
+    error: "/login",
+    signIn: "/login",
   },
   providers: [
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
+        flow: { label: "Flow", type: "text" },
+        code: { label: "Code", type: "text" },
+        otpToken: { label: "OTP token", type: "text" },
         password: { label: "Password", type: "password" },
+        ticket: { label: "Ticket", type: "text" },
       },
       async authorize(credentials) {
-        const result = await authenticateAdmin(credentials)
+        const email = readCredential(credentials, "email").trim().toLowerCase();
+        const flow = readCredential(credentials, "flow") || "password";
 
-        if (!result.ok) {
-          throw new SignInError(result.code)
+        if (flow === "verified-email-session") {
+          const response = readVerifiedEmailSessionTicket(readCredential(credentials, "ticket"));
+          return response ? toAuthUser(response) : null;
         }
 
-        return {
-          id: result.user.id,
-          email: result.user.email,
-          name: result.user.name,
-          role: result.user.role,
-          accessToken: result.accessToken,
-          refreshToken: result.refreshToken,
-          accessTokenExpiresIn: result.accessTokenExpiresIn,
-          refreshTokenExpiresIn: result.refreshTokenExpiresIn,
+        if (!validateEmail(email)) return null;
+
+        if (flow === "verify-email") {
+          const code = readCredential(credentials, "code").replace(/\D/g, "").slice(0, 6);
+          const otpToken = readCredential(credentials, "otpToken");
+          if (code.length !== 6) return null;
+          return toAuthUser(await verifyEmail({ code, email, otpToken }));
         }
+
+        const password = readCredential(credentials, "password");
+
+        if (password.length < 8) return null;
+
+        const response = await loginWithEmail({ email, password });
+        if ("twoFactorRequired" in response) return null;
+        return response.user.emailVerified ? toAuthUser(response) : null;
       },
     }),
+    ...socialProviders,
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        return {
-          ...token,
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          accessToken: user.accessToken,
-          refreshToken: user.refreshToken,
-          accessTokenExpiresAt: Date.now() + user.accessTokenExpiresIn * 1000,
-          refreshTokenExpiresAt: Date.now() + user.refreshTokenExpiresIn * 1000,
-          error: undefined,
-        }
-      }
-
-      // Already failed closed; do not keep hammering the auth service.
-      if (token.error) {
-        return token
-      }
-
-      if (Date.now() < token.accessTokenExpiresAt - ACCESS_TOKEN_SKEW_MS) {
-        return token
-      }
-
-      if (Date.now() >= token.refreshTokenExpiresAt) {
-        return { ...token, error: "RefreshFailed" as const }
-      }
-
-      return refreshSessionToken(token)
-    },
-    async session({ session, token }) {
-      session.user = {
-        ...session.user,
-        id: token.id,
-        email: token.email,
-        name: token.name,
-        role: token.role,
-      }
-      session.error = token.error
-
-      return session
-    },
-    authorized({ request, auth: session }) {
-      // Route gating only — no network calls here. Token refresh is owned by
-      // the `jwt` callback above, which Auth.js runs as part of resolving
-      // `session` and which can persist the rotated token from this context.
-      if (session?.user && !session.error) {
-        return true
-      }
-
-      // Route handlers are called by `fetch` from client components; an HTML
-      // login redirect there would be parsed as a failed JSON response.
-      if (request.nextUrl.pathname.startsWith("/api/")) {
-        return NextResponse.json(
-          { message: "Your session has expired. Sign in again." },
-          { status: 401, headers: { "Cache-Control": "no-store" } }
-        )
-      }
-
-      const loginUrl = new URL("/login", request.url)
-      loginUrl.searchParams.set(
-        "next",
-        `${request.nextUrl.pathname}${request.nextUrl.search}`
-      )
-
-      const response = NextResponse.redirect(loginUrl)
-      response.headers.set("Cache-Control", "no-store")
-
-      return response
-    },
+  secret: authSecret,
+  session: {
+    strategy: "jwt",
   },
-})
+  trustHost: true,
+});

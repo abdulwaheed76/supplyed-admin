@@ -1,0 +1,164 @@
+import type { Dispatch, SetStateAction } from "react";
+
+export type Tone = "" | "purple" | "amber" | "green";
+export type ApplicationStage = "applied" | "shortlisted" | "interview" | "hired";
+export type MessageAuthor = "me" | "them";
+export type AppRole = "admin" | "institution" | "teacher";
+export type AuthState = "landing" | "login" | "onboarding" | "signed-in";
+export type ApplicationStatus = "none" | "pending_review" | "approved" | "rejected" | "suspended";
+export type JobStatus = "DRAFT" | "ACTIVE" | "EXPIRED" | "CLOSED";
+export type JobPayType = "daily" | "fixed" | "hourly";
+
+export type AppPage =
+  | "dashboard"
+  | "post-job"
+  | "applications"
+  | "bookings"
+  | "find-teachers"
+  | "find-jobs"
+  | "job-detail"
+  | "teacher-profile"
+  | "institution-profile"
+  | "messaging"
+  | "calendar"
+  | "settings"
+  | "security"
+  | "billing";
+
+export type Teacher = {
+  id: string;
+  name: string;
+  role: string;
+  city: string;
+  rating: number;
+  reviews: number;
+  yearsExp: number;
+  rate: number;
+  dbs: boolean;
+  qts: boolean;
+  subjects: string[];
+  keyStages: string[];
+  matchScore: number;
+  distance: string;
+  availability: string;
+  tone?: Tone;
+};
+
+export type Job = {
+  id: string;
+  institution?: { id: string; imageUrl: string | null; name: string } | null;
+  title: string;
+  postedByUserId?: string;
+  description?: string;
+  address?: string | null;
+  county?: string | null;
+  postalCode?: string | null;
+  countryCode?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  requiredSkills: string[];
+  minExperienceYears?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  keyStages?: string[];
+  parkingInfo?: string | null;
+  payAmount?: number | null;
+  payType?: JobPayType | string | null;
+  status?: JobStatus;
+  expiresAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  school: string;
+  city: string;
+  date: string;
+  rate: number;
+  urgent: boolean;
+  keyStage: string;
+  subject: string;
+  mode: "instant" | "brief";
+  postedAt: string;
+  matchScore?: number;
+};
+
+export type Application = {
+  id: string;
+  teacherId: string;
+  jobId: string;
+  stage: ApplicationStage;
+  rate: number;
+  coverLetter: string;
+  appliedAt: string;
+};
+
+export type Message = {
+  id: string;
+  with: string;
+  lastMsg: string;
+  time: string;
+  unread: number;
+  tone?: Tone;
+  thread: Array<{ from: MessageAuthor; text: string; time: string }>;
+};
+
+export type RouteContext = {
+  applicationId?: string;
+  institutionId?: string;
+  jobId?: string;
+  search?: string;
+  teacherId?: string;
+};
+
+export type ToastInput = {
+  title: string;
+  msg: string;
+  icon?: string;
+  tone?: "danger" | "success";
+};
+
+export type Toast = ToastInput & {
+  id: string;
+};
+
+export type SocialAuthAvailability = {
+  google: boolean;
+  microsoft: boolean;
+};
+
+export type AppState = {
+  accountName?: string;
+  role: AppRole;
+  page: AppPage;
+  auth: AuthState;
+  signupEmail: string;
+  signupVerified: boolean;
+  roleSelected: boolean;
+  onboardingComplete: boolean;
+  applicationStatus: ApplicationStatus;
+  onboardingStep: number;
+  selectedJob: string;
+  selectedTeacher: string;
+  selectedMessage: string;
+  ctx: RouteContext;
+  toasts: Toast[];
+  tweaksOpen?: boolean;
+};
+
+export type Tweaks = {
+  urgentBanner: boolean;
+  accent: string;
+};
+
+export type GoFn = (page: AppPage, ctx?: RouteContext) => void;
+export type ToastFn = (entry: ToastInput) => void;
+export type SetAppState = Dispatch<SetStateAction<AppState>>;
+export type SetTweaks = Dispatch<SetStateAction<Tweaks>>;
+
+export type RouteProps = {
+  go: GoFn;
+  toast: ToastFn;
+  state: AppState;
+  setState: SetAppState;
+  ctx: RouteContext;
+  role: AppRole;
+  tweaks: Tweaks;
+};

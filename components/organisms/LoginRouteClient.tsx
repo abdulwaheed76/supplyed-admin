@@ -1,0 +1,442 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+
+import { loginAction, resendLoginVerification, verifyLoginEmail, verifyLoginTwoFactor } from "@/app/(auth)/login/actions";
+import { readUnknownAuthErrorMessage } from "@/features/auth/error-messages";
+import { readAuthSessionTicketPayload } from "@/lib/auth-session-routing";
+import { nextCodeResendAvailableAt } from "@/lib/code-resend-cooldown";
+import { startRouteLoading } from "@/lib/navigation-loading";
+import { useAuthToasts } from "@/lib/use-auth-toasts";
+import { useMounted } from "@/lib/use-mounted";
+import type { SocialAuthAvailability } from "@/types/supplyed";
+
+import { AuthFlowLoader, PublicThemeControls, ToastStack } from "../molecules";
+import { LoginPage } from "./LoginPage";
+import { SignupVerifyPage } from "./SignupVerifyPage";
+import { TwoFactorChallengePage } from "./TwoFactorChallengePage";
+
+type LoginStage = "login" | "two-factor" | "verify";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function readString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function readCooldownUntil(expiresInMinutes: unknown) {
+  return typeof expiresInMinutes === "number" && Number.isFinite(expiresInMinutes) && expiresInMinutes > 0
+    ? Date.now() + expiresInMinutes * 60 * 1000
+    : undefined;
+}
+
+function isVerificationChallenge(value: unknown): value is {
+  email: string;
+  emailVerified: false;
+  expiresInMinutes?: number;
+  otpToken?: string;
+} {
+  return isRecord(value) && value.emailVerified === false && Boolean(readString(value.email));
+}
+
+function isTwoFactorChallenge(value: unknown): value is {
+  code: "TWO_FACTOR_REQUIRED";
+  email: string;
+  expiresInMinutes?: number;
+  twoFactorRequired: true;
+  twoFactorToken: string;
+} {
+  return isRecord(value) && value.twoFactorRequired === true && Boolean(readString(value.twoFactorToken));
+}
+
+function socialUnavailableMessage(provider: "google" | "microsoft-entra-id") {
+  return provider === "google"
+    ? "Google sign-in is not configured. Add AUTH_GOOGLE_ID and AUTH_GOOGLE_SECRET, then restart the app."
+    : "Microsoft sign-in is not configured. Add AUTH_MICROSOFT_ENTRA_ID_ID and AUTH_MICROSOFT_ENTRA_ID_SECRET, then restart the app.";
+}
+
+function isSocialProviderAvailable(provider: "google" | "microsoft-entra-id", socialAuth: SocialAuthAvailability) {
+  return provider === "google" ? socialAuth.google : socialAuth.microsoft;
+}
+
+function LoginRouteClientInner({ initialError, socialAuth }: { initialError?: string; socialAuth: SocialAuthAvailability }) {
+  const router = useRouter();
+  const [stage, setStage] = useState<LoginStage>("login");
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [verificationNotice, setVerificationNotice] = useState<string>();
+  const [verificationToken, setVerificationToken] = useState<string>();
+  const [twoFactorEmail, setTwoFactorEmail] = useState("");
+  const [twoFactorNotice, setTwoFactorNotice] = useState<string>();
+  const [twoFactorToken, setTwoFactorToken] = useState<string>();
+  const [twoFactorExpiresAt, setTwoFactorExpiresAt] = useState<number>();
+  const [resendAvailableAt, setResendAvailableAt] = useState<number>();
+  const { authToasts, dismissAuthToast, showAuthError } = useAuthToasts(initialError);
+
+  function formData(values: Record<string, string>) {
+    const data = new FormData();
+    Object.entries(values).forEach(([key, value]) => data.set(key, value));
+    return data;
+  }
+
+  function startEmailVerification(
+    email: string,
+    otpToken: string | undefined,
+    message?: string,
+  ) {
+    setVerificationEmail(email);
+    setVerificationNotice(message);
+    setVerificationToken(otpToken);
+    setResendAvailableAt(nextCodeResendAvailableAt());
+    setStage("verify");
+  }
+
+  function startTwoFactorChallenge(email: string, token: string, message?: string, expiresInMinutes?: number) {
+    setTwoFactorEmail(email);
+    setTwoFactorNotice(message);
+    setTwoFactorToken(token);
+    setTwoFactorExpiresAt(readCooldownUntil(expiresInMinutes));
+    setStage("two-factor");
+  }
+
+  function goLanding() {
+    startRouteLoading();
+    router.push("/");
+  }
+
+  function goSignup() {
+    startRouteLoading();
+    router.push("/signup");
+  }
+
+  function goForgotPassword() {
+    startRouteLoading();
+    router.push("/forgot-password");
+  }
+
+  async function finishLogin(email: string, password: string) {
+    let loginResult: Awaited<ReturnType<typeof loginAction>>;
+
+    try {
+      loginResult = await loginAction(null, formData({ email, password }));
+    } catch (error) {
+      const message = readUnknownAuthErrorMessage(error, "We could not sign you in with those details.");
+      showAuthError(message);
+      return { message, ok: false as const };
+    }
+
+    if (!loginResult.ok) {
+      showAuthError(loginResult.message);
+      return {
+        fieldErrors: loginResult.fieldErrors,
+        message: loginResult.message,
+        ok: false as const,
+      };
+    }
+
+    if (isVerificationChallenge(loginResult.data)) {
+      startEmailVerification(
+        loginResult.data.email,
+        loginResult.data.otpToken,
+        loginResult.message,
+      );
+      return { ok: true as const };
+    }
+
+    if (isTwoFactorChallenge(loginResult.data)) {
+      startTwoFactorChallenge(
+        loginResult.data.email,
+        loginResult.data.twoFactorToken,
+        loginResult.message,
+        loginResult.data.expiresInMinutes,
+      );
+      return { ok: true as const };
+    }
+
+    const sessionPayload = readAuthSessionTicketPayload(loginResult.data);
+    if (!sessionPayload) {
+      const message = "We could not create your session. Try signing in again.";
+      showAuthError(message);
+      return {
+        message,
+        ok: false as const,
+      };
+    }
+
+    let result: Awaited<ReturnType<typeof signIn>>;
+
+    try {
+      result = await signIn("credentials", {
+        flow: "verified-email-session",
+        redirect: false,
+        redirectTo: sessionPayload.nextHref,
+        ticket: sessionPayload.ticket,
+      });
+    } catch (error) {
+      const message = readUnknownAuthErrorMessage(error, "We could not create your session. Try signing in again.");
+      showAuthError(message);
+      return { message, ok: false as const };
+    }
+
+    if (!result?.ok) {
+      const message = result?.error || "We could not sign you in with those details.";
+      showAuthError(message);
+      return {
+        message,
+        ok: false as const,
+      };
+    }
+
+    startRouteLoading();
+    router.replace(sessionPayload.nextHref);
+    router.refresh();
+    return { ok: true as const };
+  }
+
+  function backToLogin() {
+    setStage("login");
+    setVerificationEmail("");
+    setVerificationNotice(undefined);
+    setVerificationToken(undefined);
+    setTwoFactorEmail("");
+    setTwoFactorNotice(undefined);
+    setTwoFactorToken(undefined);
+    setTwoFactorExpiresAt(undefined);
+    setResendAvailableAt(undefined);
+  }
+
+  async function finishVerification(code: string) {
+    let verificationResult: Awaited<ReturnType<typeof verifyLoginEmail>>;
+
+    try {
+      verificationResult = await verifyLoginEmail(
+        null,
+        formData({ code, email: verificationEmail, otpToken: verificationToken ?? "" }),
+      );
+    } catch (error) {
+      const message = readUnknownAuthErrorMessage(error, "We could not verify that code.");
+      showAuthError(message);
+      return { message, ok: false as const };
+    }
+
+    if (!verificationResult.ok) {
+      showAuthError(verificationResult.message);
+      return {
+        message: verificationResult.message,
+        ok: false as const,
+      };
+    }
+
+    const sessionPayload = readAuthSessionTicketPayload(verificationResult.data);
+    if (!sessionPayload) {
+      const message = "Email verified, but we could not create your session. Log in again to continue.";
+      showAuthError(message);
+      return {
+        message,
+        ok: false as const,
+      };
+    }
+
+    let signInResult: Awaited<ReturnType<typeof signIn>>;
+
+    try {
+      signInResult = await signIn("credentials", {
+        flow: "verified-email-session",
+        redirect: false,
+        redirectTo: sessionPayload.nextHref,
+        ticket: sessionPayload.ticket,
+      });
+    } catch (error) {
+      const message = readUnknownAuthErrorMessage(error, "Email verified, but we could not create your session.");
+      showAuthError(message);
+      return { message, ok: false as const };
+    }
+
+    if (!signInResult?.ok) {
+      const message = signInResult?.error || "Email verified, but we could not create your session. Log in again to continue.";
+      showAuthError(message);
+      return {
+        message,
+        ok: false as const,
+      };
+    }
+
+    startRouteLoading();
+    router.replace(sessionPayload.nextHref);
+    router.refresh();
+    return { ok: true as const };
+  }
+
+  async function finishTwoFactor(code: string) {
+    let verificationResult: Awaited<ReturnType<typeof verifyLoginTwoFactor>>;
+
+    try {
+      verificationResult = await verifyLoginTwoFactor(
+        null,
+        formData({ code, email: twoFactorEmail, twoFactorToken: twoFactorToken ?? "" }),
+      );
+    } catch (error) {
+      const message = readUnknownAuthErrorMessage(error, "We could not verify that two-factor code.");
+      showAuthError(message);
+      return { message, ok: false as const };
+    }
+
+    if (!verificationResult.ok) {
+      showAuthError(verificationResult.message);
+      return {
+        fieldErrors: verificationResult.fieldErrors,
+        message: verificationResult.message,
+        ok: false as const,
+      };
+    }
+
+    const sessionPayload = readAuthSessionTicketPayload(verificationResult.data);
+    if (!sessionPayload) {
+      const message = "Two-factor code verified, but we could not create your session. Log in again to continue.";
+      showAuthError(message);
+      return {
+        message,
+        ok: false as const,
+      };
+    }
+
+    let signInResult: Awaited<ReturnType<typeof signIn>>;
+
+    try {
+      signInResult = await signIn("credentials", {
+        flow: "verified-email-session",
+        redirect: false,
+        redirectTo: sessionPayload.nextHref,
+        ticket: sessionPayload.ticket,
+      });
+    } catch (error) {
+      const message = readUnknownAuthErrorMessage(error, "Two-factor code verified, but we could not create your session.");
+      showAuthError(message);
+      return { message, ok: false as const };
+    }
+
+    if (!signInResult?.ok) {
+      const message = signInResult?.error || "Two-factor code verified, but we could not create your session. Log in again to continue.";
+      showAuthError(message);
+      return {
+        message,
+        ok: false as const,
+      };
+    }
+
+    startRouteLoading();
+    router.replace(sessionPayload.nextHref);
+    router.refresh();
+    return { ok: true as const };
+  }
+
+  async function resendVerification() {
+    let result: Awaited<ReturnType<typeof resendLoginVerification>>;
+
+    try {
+      result = await resendLoginVerification(null, formData({ email: verificationEmail }));
+    } catch (error) {
+      const message = readUnknownAuthErrorMessage(error, "We could not resend the verification code.");
+      showAuthError(message);
+      return { message, ok: false as const };
+    }
+
+    if (!result.ok) {
+      showAuthError(result.message);
+      return {
+        message: result.message,
+        ok: false as const,
+      };
+    }
+
+    if (!result.data.emailVerified) {
+      setVerificationToken(result.data.otpToken);
+      setVerificationNotice(result.message);
+      setResendAvailableAt(nextCodeResendAvailableAt());
+    }
+
+    return { ok: true as const };
+  }
+
+  function startSocialAuth(provider: "google" | "microsoft-entra-id") {
+    if (!isSocialProviderAvailable(provider, socialAuth)) {
+      showAuthError(socialUnavailableMessage(provider));
+      return;
+    }
+
+    startRouteLoading();
+    void signIn(provider, { redirectTo: "/post-auth?authSource=login" }).catch((error) => {
+      showAuthError(readUnknownAuthErrorMessage(error, "Social sign-in could not start."));
+    });
+  }
+
+  if (stage === "verify") {
+    return (
+      <>
+        <SignupVerifyPage
+          email={verificationEmail}
+          notice={verificationNotice}
+          onBack={backToLogin}
+          onLanding={goLanding}
+          onLogin={backToLogin}
+          onResend={resendVerification}
+          onVerified={finishVerification}
+          resendAvailableAt={resendAvailableAt}
+        />
+        <PublicThemeControls />
+        <ToastStack autoCloseMs={7000} onDismiss={dismissAuthToast} toasts={authToasts} />
+      </>
+    );
+  }
+
+  if (stage === "two-factor") {
+    return (
+      <>
+        <TwoFactorChallengePage
+          email={twoFactorEmail}
+          expiresAt={twoFactorExpiresAt}
+          notice={twoFactorNotice}
+          onBack={backToLogin}
+          onLanding={goLanding}
+          onVerified={finishTwoFactor}
+        />
+        <PublicThemeControls />
+        <ToastStack autoCloseMs={7000} onDismiss={dismissAuthToast} toasts={authToasts} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <LoginPage
+        onForgotPassword={goForgotPassword}
+        onGoogleAuth={() => startSocialAuth("google")}
+        onLanding={goLanding}
+        onLogin={finishLogin}
+        onMicrosoftAuth={() => startSocialAuth("microsoft-entra-id")}
+        onSwitchSignup={goSignup}
+        socialAuth={socialAuth}
+      />
+      <PublicThemeControls />
+      <ToastStack autoCloseMs={7000} onDismiss={dismissAuthToast} toasts={authToasts} />
+    </>
+  );
+}
+
+export function LoginRouteClient({ initialError, socialAuth }: { initialError?: string; socialAuth: SocialAuthAvailability }) {
+  const isClient = useMounted();
+
+  if (!isClient) {
+    return (
+      <AuthFlowLoader
+        description="Checking saved session state before showing sign in."
+        title="Preparing sign in"
+      />
+    );
+  }
+
+  return <LoginRouteClientInner initialError={initialError} socialAuth={socialAuth} />;
+}
