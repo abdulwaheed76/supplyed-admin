@@ -14,7 +14,6 @@ import type { UserListItem } from "@/lib/users/schema"
 const profileContext: Record<string, string> = {
   INSTRUCTOR: "INSTRUCTOR_PROFILE",
   INSTITUTION: "INSTITUTION_PROFILE",
-  RECRUITER: "RECRUITER_PROFILE",
 }
 
 const response = <T,>(item: z.ZodType<T>) =>

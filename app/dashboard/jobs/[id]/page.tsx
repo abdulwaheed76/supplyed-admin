@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { getJob } from "@/lib/jobs/get-job"
-import { formatJobDate, formatJobPay } from "@/lib/jobs/presentation"
+import { formatJobDate, formatJobPay, getJobLocation } from "@/lib/jobs/presentation"
 import { getUser } from "@/lib/users/get-user"
 import { formatUserRole, getUserDisplayName } from "@/lib/users/presentation"
 
@@ -96,7 +96,7 @@ async function JobDetailsContent({ params, searchParams }: JobDetailsPageProps) 
                     {result.job.title}
                   </h1>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {[result.job.subject, result.job.location]
+                    {[result.job.subject, getJobLocation(result.job)]
                       .filter(Boolean)
                       .join(" · ") || "No subject or location specified"}
                   </p>
@@ -136,7 +136,7 @@ async function JobDetailsContent({ params, searchParams }: JobDetailsPageProps) 
                     </div>
                     <div>
                       <dt className="text-xs font-medium text-muted-foreground">Location</dt>
-                      <dd className="mt-1 font-medium">{result.job.location || "—"}</dd>
+                      <dd className="mt-1 font-medium">{getJobLocation(result.job) || "—"}</dd>
                     </div>
                     <div>
                       <dt className="text-xs font-medium text-muted-foreground">Pay</dt>

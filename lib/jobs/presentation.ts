@@ -1,4 +1,8 @@
-import type { JobStatus } from "@/lib/jobs/schema"
+import type { Job, JobStatus } from "@/lib/jobs/schema"
+
+export function getJobLocation(job: Pick<Job, "address" | "city" | "county" | "postalCode">) {
+  return [job.address, job.city, job.county, job.postalCode].filter(Boolean).join(", ")
+}
 
 const statusLabels: Record<JobStatus, string> = {
   DRAFT: "Draft",

@@ -31,6 +31,7 @@ import {
   formatJobDate,
   formatJobPay,
   getJobStatusLabel,
+  getJobLocation,
 } from "@/lib/jobs/presentation"
 import type { Job, JobStatus } from "@/lib/jobs/schema"
 
@@ -195,9 +196,9 @@ export function JobsTable({
                     <TableCell className="whitespace-normal py-4 align-top">
                       <p
                         className="line-clamp-2 break-words leading-5 [overflow-wrap:anywhere]"
-                        title={job.location || undefined}
+                        title={getJobLocation(job) || undefined}
                       >
-                        {job.location || "—"}
+                        {getJobLocation(job) || "—"}
                       </p>
                     </TableCell>
                     <TableCell className="whitespace-normal py-4 align-top">

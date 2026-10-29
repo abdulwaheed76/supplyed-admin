@@ -18,7 +18,10 @@ export const jobSchema = z.object({
   title: z.string(),
   description: z.string(),
   subject: z.string().nullable().optional(),
-  location: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  county: z.string().nullable().optional(),
+  postalCode: z.string().nullable().optional(),
   startDate: z.string().nullable().optional(),
   endDate: z.string().nullable().optional(),
   keyStages: z.array(z.string()),
@@ -46,8 +49,11 @@ export const createJobInputSchema = z
   .object({
     title: z.string().trim().min(1).max(200),
     description: z.string().trim().min(1).max(10_000),
-    subject: optionalText(200),
-    location: optionalText(250),
+    subject: optionalText(100),
+    address: optionalText(250),
+    city: optionalText(100),
+    county: optionalText(100),
+    postalCode: optionalText(20),
     startDate: optionalDate,
     endDate: optionalDate,
     keyStages: z
@@ -61,6 +67,7 @@ export const createJobInputSchema = z
     payType: z.enum(["hourly", "daily", "fixed"]).optional(),
     expiresAt: optionalDate,
   })
+  .strict()
   .superRefine((job, context) => {
     if (
       job.startDate &&

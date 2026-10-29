@@ -55,38 +55,12 @@ const institutionProfileSchema = z.object({
   updatedAt: z.string().optional(),
 })
 
-const recruiterProfileSchema = z.object({
-  id: z.string(),
-  userId: z.string(),
-  displayName: z.string().nullable().optional(),
-  imageUrl: z.string().nullable().optional(),
-  bio: z.string().nullable().optional(),
-  address: z.string().nullable().optional(),
-  city: z.string().nullable().optional(),
-  county: z.string().nullable().optional(),
-  postalCode: z.string().nullable().optional(),
-  countryCode: z.string().nullable().optional(),
-  status: profileStatusSchema,
-  createdAt: z.string().optional(),
-  updatedAt: z.string().optional(),
-})
-
-const recruitersResponseSchema = z.object({
-  success: z.literal(true),
-  data: z.union([
-    z.array(recruiterProfileSchema),
-    z.object({ recruiters: z.array(recruiterProfileSchema) }),
-  ]),
-})
-
 export type InstructorProfile = z.infer<typeof instructorProfileSchema>
 export type InstitutionProfile = z.infer<typeof institutionProfileSchema>
-export type RecruiterProfile = z.infer<typeof recruiterProfileSchema>
 
 export type RoleProfileResult =
   | { ok: true; kind: "instructor"; profile: InstructorProfile | null }
   | { ok: true; kind: "institution"; profile: InstitutionProfile | null }
-  | { ok: true; kind: "recruiter"; profile: RecruiterProfile | null }
   | { ok: true; kind: "none"; profile: null }
   | { ok: false; message: string; status: number }
 
@@ -99,9 +73,7 @@ export function withRoleProfileName(
   const profileName =
     result.kind === "instructor"
       ? result.profile.fullName
-      : result.kind === "institution"
-        ? result.profile.name
-        : result.profile.displayName
+      : result.profile.name
 
   return { ...user, displayName: user.displayName?.trim() || profileName }
 }
@@ -111,9 +83,8 @@ export async function getRoleProfile(
 ): Promise<RoleProfileResult> {
   const isInstructor = user.role === "INSTRUCTOR"
   const isInstitution = user.role === "INSTITUTION"
-  const isRecruiter = user.role === "RECRUITER"
 
-  if (!isInstructor && !isInstitution && !isRecruiter) {
+  if (!isInstructor && !isInstitution) {
     return { ok: true, kind: "none", profile: null }
   }
 
@@ -179,26 +150,5 @@ export async function getRoleProfile(
     }
   }
 
-  const result = await adminApiRequest({
-    path: "recruiters",
-    schema: recruitersResponseSchema,
-    serviceName: "recruiters",
-    fallbackMessage: "Unable to load recruiters.",
-    debugLabel: "recruiters-api",
-  })
-
-  if (!result.ok) {
-    return result
-  }
-
-  return {
-    ok: true,
-    kind: "recruiter",
-    profile:
-      (Array.isArray(result.data.data)
-        ? result.data.data
-        : result.data.data.recruiters
-      ).find((profile) => profile.userId === user.id) ?? null,
-  }
+  return { ok: true, kind: "none", profile: null }
 }
-

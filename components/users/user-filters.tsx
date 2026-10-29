@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { UserFilters } from "@/lib/users/get-users"
+import { USER_ROLES } from "@/lib/users/roles"
 
 const selectClass = "h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
 
@@ -85,7 +86,7 @@ export function UserFiltersForm({ filters }: { filters: UserFilters }) {
               <Label htmlFor="user-role" className="mb-1 block text-xs">Role</Label>
               <select id="user-role" name="role" defaultValue={filters.role ?? ""} className={selectClass}>
                 <option value="">All roles</option>
-                {(["USER", "ADMIN", "INSTRUCTOR", "INSTITUTION", "RECRUITER"] as const).map((role) => (
+                {USER_ROLES.map((role) => (
                   <option key={role} value={role}>{role}</option>
                 ))}
               </select>

@@ -4,8 +4,10 @@ import { z } from "zod"
 
 import { adminApiRequest } from "@/lib/api/admin-api-client"
 import { userSchema } from "@/lib/users/schema"
+import { createUserRoleSchema } from "@/lib/users/roles"
 
 const inputSchema = z.object({
+  role: createUserRoleSchema,
   email: z.email().transform((email) => email.trim().toLowerCase()),
   password: z.string().min(8).refine((value) => new TextEncoder().encode(value).length <= 72, "Password must be at most 72 UTF-8 bytes.").regex(/(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9])/, "Use an uppercase letter, a number, and a special character."),
   name: z.string().trim().max(200).optional(),

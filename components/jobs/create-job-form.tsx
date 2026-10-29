@@ -117,7 +117,10 @@ export function CreateJobForm() {
       title,
       description,
       subject: readOptionalText(formData, "subject"),
-      location: readOptionalText(formData, "location"),
+      address: readOptionalText(formData, "address"),
+      city: readOptionalText(formData, "city"),
+      county: readOptionalText(formData, "county"),
+      postalCode: readOptionalText(formData, "postalCode"),
       startDate: readDate(formData, "startDate"),
       endDate: readDate(formData, "endDate"),
       keyStages: readKeyStages(formData),
@@ -183,20 +186,35 @@ export function CreateJobForm() {
               id="subject"
               name="subject"
               placeholder="Mathematics"
-              maxLength={200}
+              maxLength={100}
               disabled={isPending}
             />
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="location">Location</FieldLabel>
+            <FieldLabel htmlFor="address">Street address</FieldLabel>
             <Input
-              id="location"
-              name="location"
-              placeholder="London"
+              id="address"
+              name="address"
+              placeholder="1 School Lane"
               maxLength={250}
               disabled={isPending}
             />
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="city">City</FieldLabel>
+            <Input id="city" name="city" placeholder="London" maxLength={100} disabled={isPending} />
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="county">County</FieldLabel>
+            <Input id="county" name="county" placeholder="Greater London" maxLength={100} disabled={isPending} />
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="postalCode">Postcode</FieldLabel>
+            <Input id="postalCode" name="postalCode" placeholder="SW1A 2AA" maxLength={20} disabled={isPending} />
           </Field>
 
           <Field>

@@ -5,6 +5,7 @@ import { z } from "zod"
 import { adminApiRequest } from "@/lib/api/admin-api-client"
 import { getCurrentSession } from "@/lib/auth/session"
 import { userSchema } from "@/lib/users/schema"
+import { userRoleSchema } from "@/lib/users/roles"
 
 /** The backend answers a deletion with `data: null`; only the envelope matters. */
 const deleteResponseSchema = z.object({
@@ -16,19 +17,11 @@ const updateResponseSchema = z.object({
   data: userSchema,
 })
 
-const adminUserRoleSchema = z.enum([
-  "USER",
-  "INSTRUCTOR",
-  "INSTITUTION",
-  "RECRUITER",
-  "ADMIN",
-])
-
 const updateUserInputSchema = z
   .object({
     name: z.string().trim().max(160).optional(),
     phone: z.string().trim().max(40).optional(),
-    role: adminUserRoleSchema.optional(),
+    role: userRoleSchema.optional(),
     emailVerified: z.boolean().optional(),
     phoneVerified: z.boolean().optional(),
   })

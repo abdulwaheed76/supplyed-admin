@@ -2,6 +2,7 @@ import { z } from "zod"
 
 import { routeRequest } from "@/lib/api/route-request"
 import { userSchema, type UserListItem } from "@/lib/users/schema"
+import type { CreateUserRole, UserRole } from "@/lib/users/roles"
 
 const updateUserResponseSchema = z.object({
   user: userSchema,
@@ -10,12 +11,13 @@ const updateUserResponseSchema = z.object({
 export type UpdateUserInput = {
   name?: string
   phone?: string
-  role?: string
+  role?: UserRole
   emailVerified?: boolean
   phoneVerified?: boolean
 }
 
 export type CreateUserInput = {
+  role: CreateUserRole
   email: string
   password: string
   name?: string

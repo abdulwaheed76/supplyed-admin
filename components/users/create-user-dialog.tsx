@@ -12,6 +12,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useCreateUser } from "@/hooks/use-users"
+import { CREATE_USER_ROLES, createUserRoleSchema } from "@/lib/users/roles"
+import { formatUserRole } from "@/lib/users/presentation"
 
 export function CreateUserDialog() {
   const [open, setOpen] = React.useState(false)
@@ -24,6 +26,7 @@ export function CreateUserDialog() {
     const name = String(form.get("name") ?? "").trim()
     const phone = String(form.get("phone") ?? "").trim()
     createUser.mutate({
+      role: createUserRoleSchema.parse(form.get("role")),
       email: String(form.get("email") ?? "").trim().toLowerCase(),
       password: String(form.get("password") ?? ""),
       name: name || undefined,
@@ -47,9 +50,16 @@ export function CreateUserDialog() {
         <form className="grid gap-5" onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Create user</DialogTitle>
-            <DialogDescription>The new account starts as a user. They can create their role profile later.</DialogDescription>
+            <DialogDescription>Choose an instructor or institution account. They can complete their profile later.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2 sm:col-span-2">
+              <Label htmlFor="new-user-role">Role</Label>
+              <select id="new-user-role" name="role" defaultValue="INSTRUCTOR" required disabled={createUser.isPending}
+                className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm">
+                {CREATE_USER_ROLES.map((role) => <option key={role} value={role}>{formatUserRole(role)}</option>)}
+              </select>
+            </div>
             <div className="grid gap-2 sm:col-span-2">
               <Label htmlFor="new-user-email">Email</Label>
               <Input id="new-user-email" name="email" type="email" required maxLength={254} autoComplete="off" disabled={createUser.isPending} />

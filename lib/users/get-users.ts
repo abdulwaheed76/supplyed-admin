@@ -6,6 +6,7 @@ import { adminApiRequest } from "@/lib/api/admin-api-client"
 import { getRoleProfile, withRoleProfileName } from "@/lib/users/get-role-profile"
 import { getUserProvidedName } from "@/lib/users/presentation"
 import { userSchema, type UserListItem } from "@/lib/users/schema"
+import { userRoleSchema } from "@/lib/users/roles"
 
 const paginationSchema = z
   .object({
@@ -119,6 +120,9 @@ function readPagination(
 }
 
 export async function getUsers(options: GetUsersOptions): Promise<GetUsersResult> {
+  if (options.role !== undefined && !userRoleSchema.safeParse(options.role).success) {
+    return { ok: false, message: "Choose a supported user role.", status: 400 }
+  }
   const { page, limit } = options
   const result = await adminApiRequest({
     path: "users",

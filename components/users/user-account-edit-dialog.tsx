@@ -19,14 +19,7 @@ import { Label } from "@/components/ui/label"
 import { useDisableUserTwoFactor, useUpdateUser } from "@/hooks/use-users"
 import { formatUserRole } from "@/lib/users/presentation"
 import type { UserListItem } from "@/lib/users/schema"
-
-const USER_ROLES = [
-  "USER",
-  "INSTRUCTOR",
-  "INSTITUTION",
-  "RECRUITER",
-  "ADMIN",
-] as const
+import { USER_ROLES, userRoleSchema } from "@/lib/users/roles"
 
 type UserAccountEditDialogProps = {
   user: UserListItem
@@ -75,7 +68,7 @@ export function UserAccountEditDialog({ user, currentUserId }: UserAccountEditDi
         input: {
           name,
           phone,
-          role,
+          role: userRoleSchema.parse(role),
           emailVerified: emailVerified === user.emailVerified ? undefined : emailVerified,
           phoneVerified: phoneVerified === (user.phoneVerified ?? false) ? undefined : phoneVerified,
         },
