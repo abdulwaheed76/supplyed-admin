@@ -8,16 +8,8 @@ import {
 import { StaticConversationMessages } from "@/components/conversations/static-conversation-messages"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import type { AdminApiResult } from "@/lib/api/admin-api-client"
-import { formatConversationDate } from "@/lib/conversations/presentation"
+import { formatConversationDate, getConversationStatusLabel } from "@/lib/conversations/presentation"
 import type { Conversation, MessagesPage } from "@/lib/conversations/schema"
-
-function statusLabel(value: string) {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ")
-}
 
 export function ConversationThread({
   conversation,
@@ -54,7 +46,7 @@ export function ConversationThread({
                 Conversation {position}
               </span>
               <span className="rounded-full border bg-background px-2.5 py-1 text-xs font-medium">
-                {statusLabel(conversation.applicationStatus)}
+                {getConversationStatusLabel(conversation)}
               </span>
             </div>
             <CardTitle className="break-words text-xl [overflow-wrap:anywhere]">

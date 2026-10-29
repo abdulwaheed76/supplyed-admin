@@ -29,7 +29,7 @@ async function getReviewComments(documents: DocumentRecord[]) {
 
       return [
         document.id,
-        result.ok ? getLatestDocumentReviewComment(result.reviews) : null,
+        result.ok ? getLatestDocumentReviewComment(result.reviews, document) : null,
       ] as const
     })
   )

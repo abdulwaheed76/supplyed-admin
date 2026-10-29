@@ -3,7 +3,7 @@ import { ChevronLeftIcon, ChevronRightIcon, MessageSquareIcon, PaperclipIcon } f
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatConversationDate, getConversationHref } from "@/lib/conversations/presentation"
+import { formatConversationDate, getConversationHref, getConversationStatusLabel } from "@/lib/conversations/presentation"
 import type { JobConversations } from "@/lib/conversations/schema"
 import { cn } from "@/lib/utils"
 
@@ -41,7 +41,7 @@ export function ConversationList({ data, selectedId }: { data: JobConversations;
                   <p className="break-words font-semibold [overflow-wrap:anywhere]">{conversation.participants.instructor.name}</p>
                   <p className="break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">with {conversation.participants.poster.name}</p>
                 </div>
-                <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">{conversation.applicationStatus.replaceAll("_", " ").toLowerCase()}</span>
+                <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">{getConversationStatusLabel(conversation)}</span>
                 {conversation.lastMessage ? (
                   <p className="line-clamp-2 break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
                     <span className="font-medium">{conversation.lastMessage.senderUserId && conversation.lastMessage.senderName ? conversation.lastMessage.senderName : "Deleted user"}: </span>

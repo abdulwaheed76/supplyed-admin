@@ -68,7 +68,7 @@ export function UserAccountEditDialog({ user, currentUserId }: UserAccountEditDi
         input: {
           name,
           phone,
-          role: userRoleSchema.parse(role),
+          role: role === user.role ? undefined : userRoleSchema.parse(role),
           emailVerified: emailVerified === user.emailVerified ? undefined : emailVerified,
           phoneVerified: phoneVerified === (user.phoneVerified ?? false) ? undefined : phoneVerified,
         },
@@ -126,6 +126,9 @@ export function UserAccountEditDialog({ user, currentUserId }: UserAccountEditDi
                 disabled={isPending}
                 className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-shadow focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
               >
+                {!userRoleSchema.safeParse(user.role).success ? (
+                  <option value={user.role} disabled>{formatUserRole(user.role)} (existing account)</option>
+                ) : null}
                 {USER_ROLES.map((option) => (
                   <option key={option} value={option}>
                     {formatUserRole(option)}

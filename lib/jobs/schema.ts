@@ -43,6 +43,7 @@ const optionalDate = z
   .refine((value) => !Number.isNaN(new Date(value).getTime()), {
     message: "Enter a valid date and time.",
   })
+  .transform((value) => new Date(value).toISOString())
   .optional()
 
 export const createJobInputSchema = z
@@ -50,6 +51,8 @@ export const createJobInputSchema = z
     title: z.string().trim().min(1).max(200),
     description: z.string().trim().min(1).max(10_000),
     subject: optionalText(100),
+    subjects: z.array(z.string().trim().min(1).max(100)).max(50).optional(),
+    otherSubjects: z.array(z.string().trim().min(1).max(100)).max(50).optional(),
     address: optionalText(250),
     city: optionalText(100),
     county: optionalText(100),
@@ -69,6 +72,12 @@ export const createJobInputSchema = z
   })
   .strict()
   .superRefine((job, context) => {
+    if (job.subjects?.includes("Other") && !job.otherSubjects?.length) {
+      context.addIssue({ code: "custom", path: ["otherSubjects"], message: "Enter the other subject name." })
+    }
+    if (job.startDate && job.expiresAt && new Date(job.expiresAt) > new Date(job.startDate)) {
+      context.addIssue({ code: "custom", path: ["expiresAt"], message: "The listing must expire before work begins." })
+    }
     if (
       job.startDate &&
       job.endDate &&

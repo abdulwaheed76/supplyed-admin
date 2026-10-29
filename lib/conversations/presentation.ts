@@ -1,4 +1,10 @@
-import type { ConversationMessage } from "@/lib/conversations/schema"
+import type { Conversation, ConversationMessage } from "@/lib/conversations/schema"
+
+export function getConversationStatusLabel(conversation: Pick<Conversation, "applicationStatus" | "booking" | "job">) {
+  const status = conversation.applicationStatus ?? conversation.booking?.status
+  if (!status) return conversation.job ? "Job conversation" : "General conversation"
+  return status.toLowerCase().split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")
+}
 
 export function formatConversationDate(value: string | null) {
   if (!value || Number.isNaN(new Date(value).getTime())) return "Not recorded"

@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import type { CreateJobInput } from "@/lib/jobs/schema"
+import type { JobFormOptions } from "@/lib/jobs/form-options"
 
 function readOptionalText(formData: FormData, name: string) {
   const value = formData.get(name)
@@ -40,20 +41,7 @@ function readDate(formData: FormData, name: string) {
 }
 
 function readKeyStages(formData: FormData) {
-  const value = readOptionalText(formData, "keyStages")
-
-  if (!value) {
-    return []
-  }
-
-  return [
-    ...new Set(
-      value
-        .split(/[\n,]/)
-        .map((stage) => stage.trim())
-        .filter(Boolean)
-    ),
-  ]
+  return [...new Set(formData.getAll("keyStages").filter((value): value is string => typeof value === "string"))]
 }
 
 async function createJob(input: CreateJobInput) {
@@ -95,8 +83,9 @@ async function createJob(input: CreateJobInput) {
   return body.job.id
 }
 
-export function CreateJobForm() {
+export function CreateJobForm({ options }: { options: JobFormOptions }) {
   const router = useRouter()
+  const [subject, setSubject] = React.useState("")
   const [error, setError] = React.useState<string | null>(null)
   const [isPending, startTransition] = React.useTransition()
 
@@ -116,7 +105,9 @@ export function CreateJobForm() {
     const input: CreateJobInput = {
       title,
       description,
-      subject: readOptionalText(formData, "subject"),
+      subject: subject && subject !== "Other" ? subject : undefined,
+      subjects: subject === "Other" ? ["Other"] : undefined,
+      otherSubjects: subject === "Other" ? [readOptionalText(formData, "otherSubject") ?? ""] : undefined,
       address: readOptionalText(formData, "address"),
       city: readOptionalText(formData, "city"),
       county: readOptionalText(formData, "county"),
@@ -182,13 +173,23 @@ export function CreateJobForm() {
 
           <Field>
             <FieldLabel htmlFor="subject">Subject</FieldLabel>
-            <Input
+            <select
               id="subject"
               name="subject"
-              placeholder="Mathematics"
-              maxLength={100}
+              value={subject}
+              onChange={(event) => setSubject(event.target.value)}
               disabled={isPending}
-            />
+              className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
+            >
+              <option value="">Select a subject</option>
+              {options.subject.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+            {subject === "Other" ? (
+              <>
+                <FieldLabel htmlFor="otherSubject">Other subject</FieldLabel>
+                <Input id="otherSubject" name="otherSubject" maxLength={100} required disabled={isPending} />
+              </>
+            ) : null}
           </Field>
 
           <Field>
@@ -204,12 +205,18 @@ export function CreateJobForm() {
 
           <Field>
             <FieldLabel htmlFor="city">City</FieldLabel>
-            <Input id="city" name="city" placeholder="London" maxLength={100} disabled={isPending} />
+            <select id="city" name="city" defaultValue="" disabled={isPending} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm">
+              <option value="">Select a city</option>
+              {options.city.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
           </Field>
 
           <Field>
             <FieldLabel htmlFor="county">County</FieldLabel>
-            <Input id="county" name="county" placeholder="Greater London" maxLength={100} disabled={isPending} />
+            <select id="county" name="county" defaultValue="" disabled={isPending} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm">
+              <option value="">Select a county or region</option>
+              {options.region.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
           </Field>
 
           <Field>
@@ -261,22 +268,23 @@ export function CreateJobForm() {
               className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none transition-shadow focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="">Select a pay type</option>
-              <option value="hourly">Hourly</option>
-              <option value="daily">Daily</option>
-              <option value="fixed">Fixed</option>
+              {options.payType.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </Field>
 
           <Field className="sm:col-span-2">
-            <FieldLabel htmlFor="keyStages">Key stages</FieldLabel>
-            <Input
-              id="keyStages"
-              name="keyStages"
-              placeholder="KS3, KS4"
-              disabled={isPending}
-            />
+            <fieldset disabled={isPending} className="space-y-2">
+              <legend className="text-sm font-medium">Key stages</legend>
+              <div className="flex flex-wrap gap-4">
+                {options.keyStage.map((option) => (
+                  <label key={option.value} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="keyStages" value={option.value} />{option.label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             <FieldDescription>
-              Separate multiple key stages with commas.
+              Select the key stages for this role.
             </FieldDescription>
           </Field>
 

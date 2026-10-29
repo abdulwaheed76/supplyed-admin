@@ -16,10 +16,11 @@ const conversationPartySchema = z.object({
 
 export const conversationSchema = z.object({
   id: recordIdSchema,
-  applicationId: recordIdSchema,
-  applicationStatus: z.string(),
+  applicationId: recordIdSchema.nullable(),
+  applicationStatus: z.string().nullable(),
+  booking: z.object({ id: recordIdSchema, status: z.string(), applicationId: recordIdSchema }).nullable().optional(),
   readOnly: z.boolean(),
-  job: z.object({ id: recordIdSchema, title: z.string() }),
+  job: z.object({ id: recordIdSchema, title: z.string() }).nullable(),
   participants: z.object({
     instructor: conversationPartySchema,
     poster: conversationPartySchema,

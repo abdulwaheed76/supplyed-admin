@@ -119,3 +119,80 @@ test("legacy location and excessive address lengths are rejected without losing 
   }
   assert.equal(h.calls.length, 0)
 })
+
+test("document review history accepts the backend file key and hides obsolete rejection notes", async () => {
+  const document = { id, fileKey: "current.pdf", status: "REJECTED" }
+  const review = { id: "review", documentId: id, reviewedFileKey: "current.pdf", reviewerId: id,
+    fromStatus: "PENDING", toStatus: "REJECTED", notes: "Replace the expired document", createdAt: "2026-10-29T10:00:00Z" }
+  const h = harness([review])
+  const { getDocumentReviews, getLatestDocumentReviewComment } = h.load("lib/document-reviews/get-document-reviews.ts")
+  const result = await getDocumentReviews(id)
+  assert.equal(result.ok, true)
+  assert.equal(getLatestDocumentReviewComment(result.reviews, document).notes, review.notes)
+  assert.equal(getLatestDocumentReviewComment(result.reviews, { ...document, fileKey: "replacement.pdf" }), null)
+  assert.equal(getLatestDocumentReviewComment(result.reviews, { ...document, status: "APPROVED" }), null)
+  assert.equal(getLatestDocumentReviewComment(result.reviews, { ...document, status: "PENDING" }), null)
+})
+
+function conversation(job = { id, title: "Cover" }) {
+  return { id, applicationId: null, applicationStatus: null, booking: null, readOnly: true, job,
+    participants: {
+      instructor: { id, userId: id, name: "Teacher", role: "teacher" },
+      poster: { id: null, userId: id, name: "School", role: "school" },
+    }, instructorLastReadAt: null, posterLastReadAt: null, lastMessage: null, lastMessageAt: null,
+    createdAt: "2026-10-29T10:00:00Z" }
+}
+
+test("job conversations without applications load and have a readable label", async () => {
+  const data = { job: { id, title: "Cover" }, conversations: [conversation()],
+    pagination: { page: 1, limit: 20, total: 1, totalPages: 1, hasNextPage: false } }
+  const h = harness(data)
+  const result = await h.load("lib/conversations/get-conversations.ts").getJobConversations(id)
+  assert.equal(result.ok, true)
+  const { getConversationStatusLabel } = h.load("lib/conversations/presentation.ts")
+  assert.equal(getConversationStatusLabel(result.data.conversations[0]), "Job conversation")
+  assert.equal(getConversationStatusLabel(conversation(null)), "General conversation")
+  assert.equal(getConversationStatusLabel({ ...conversation(), booking: { id, applicationId: id, status: "CONFIRMED" } }), "Confirmed")
+})
+
+test("a general conversation cannot be displayed under an unrelated job", async () => {
+  const h = harness(conversation(null))
+  const result = await h.load("lib/conversations/get-conversations.ts").getConversation(id, id)
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 404)
+})
+
+test("job options use active backend values, preserving labels separately", () => {
+  const { activeJobOptions } = harness().load("lib/jobs/form-options.ts")
+  const group = { isActive: true, options: [
+    { value: "KS3", label: "Key Stage 3", isActive: true },
+    { value: "KS4", label: "Retired stage", isActive: false },
+  ] }
+  assert.deepEqual(JSON.parse(JSON.stringify(activeJobOptions(group))), [{ value: "KS3", label: "Key Stage 3" }])
+  assert.equal(activeJobOptions({ ...group, isActive: false }).length, 0)
+})
+
+test("job dates are sent as ISO timestamps and expiry cannot extend into work", async () => {
+  const input = { title: "Cover", description: "Teaching cover", keyStages: [], startDate: "2027-01-02", expiresAt: "2027-01-01" }
+  const h = harness({ ...input, id, postedByUserId: id, status: "DRAFT" })
+  assert.equal((await h.invoke("app/api/jobs/route.ts", "POST", input)).status, 201)
+  assert.equal(JSON.parse(h.calls[0].body).startDate, "2027-01-02T00:00:00.000Z")
+  assert.equal((await h.invoke("app/api/jobs/route.ts", "POST", { ...input, expiresAt: "2027-01-03" })).status, 400)
+  assert.equal(h.calls.length, 1)
+})
+
+test("Other subject sends the supported fields and requires a custom name", async () => {
+  const input = { title: "Cover", description: "Teaching cover", keyStages: [], subjects: ["Other"], otherSubjects: ["Robotics"] }
+  const h = harness({ ...input, id, postedByUserId: id, status: "DRAFT" })
+  assert.equal((await h.invoke("app/api/jobs/route.ts", "POST", input)).status, 201)
+  assert.deepEqual(JSON.parse(h.calls[0].body), input)
+  assert.equal((await h.invoke("app/api/jobs/route.ts", "POST", { ...input, otherSubjects: [] })).status, 400)
+  assert.equal(h.calls.length, 1)
+})
+
+test("existing legacy users can have their details edited without sending an unsupported role", async () => {
+  const h = harness({ id, email: credentials.email, role: "USER", emailVerified: false, name: "Updated" })
+  const response = await h.invoke("app/api/users/[id]/route.ts", "PATCH", { name: "Updated" })
+  assert.equal(response.status, 200)
+  assert.deepEqual(JSON.parse(h.calls[0].body), { name: "Updated" })
+})

@@ -1,6 +1,7 @@
 import "server-only"
 
 import { adminApiRequest } from "@/lib/api/admin-api-client"
+import type { DocumentRecord } from "@/lib/documents/schema"
 import {
   documentReviewsResponseSchema,
   type DocumentReviewComment,
@@ -40,12 +41,16 @@ export async function getDocumentReviews(
 }
 
 export function getLatestDocumentReviewComment(
-  reviews: DocumentReviewRecord[]
+  reviews: DocumentReviewRecord[],
+  document: Pick<DocumentRecord, "id" | "fileKey" | "status">
 ): DocumentReviewComment | null {
+  if (!document.fileKey || !["REJECTED", "REQUIRES_INFO"].includes(document.status)) return null
   const review = [...reviews]
     .filter(
       (item) =>
-        (item.toStatus === "REJECTED" || item.toStatus === "REQUIRES_INFO") &&
+        item.documentId === document.id &&
+        item.reviewedFileKey === document.fileKey &&
+        item.toStatus === document.status &&
         item.notes?.trim()
     )
     .sort(

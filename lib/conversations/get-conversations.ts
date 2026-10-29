@@ -41,7 +41,7 @@ export async function getJobConversations(
   if (!result.ok) return result
 
   const data = result.data.data
-  if (data.job.id !== id.data || data.conversations.some((item) => item.job.id !== id.data)) {
+  if (data.job.id !== id.data || data.conversations.some((item) => item.job?.id !== id.data)) {
     return { ok: false, message: "The conversations service returned an invalid job response.", status: 502 }
   }
 
@@ -71,7 +71,7 @@ export async function getConversation(
   })
   if (!result.ok) return result
 
-  if (result.data.data.id !== id.data || result.data.data.job.id !== jobId) {
+  if (result.data.data.id !== id.data || result.data.data.job?.id !== jobId) {
     return { ok: false, message: "This conversation does not belong to this job.", status: 404 }
   }
 

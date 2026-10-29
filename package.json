@@ -8,6 +8,7 @@
     "start": "next start -p 3001",
     "lint": "eslint",
     "test": "node --test tests/*.test.mjs",
+    "check:backend": "node scripts/check-backend-contract.mjs",
     "test:dropdowns": "node --test tests/dropdowns.test.mjs"
   },
   "dependencies": {
