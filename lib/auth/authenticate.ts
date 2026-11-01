@@ -1,4 +1,6 @@
 import { z } from "zod"
+import { cookies } from "next/headers"
+import { USE_SECURE_AUTH_COOKIES } from "./cookies"
 
 import { createAuthApiUrl, getAuthConfig } from "@/lib/auth/config"
 import type { SignInErrorCode } from "@/lib/auth/errors"
@@ -49,9 +51,12 @@ const loginResponseSchema = z.object({
 export async function authenticateAdmin(
   input: unknown
 ): Promise<AuthenticationResult> {
+  const code = z.object({ code: z.string().regex(/^(?:\d{6}|[A-HJ-NP-Z2-9]{4}(?:-[A-HJ-NP-Z2-9]{4}){3})$/i) }).safeParse(input)
+  const cookieStore = await cookies()
+  const challenge = code.success ? cookieStore.get("supplyed_admin_2fa")?.value : undefined
   const credentials = loginSchema.safeParse(input)
 
-  if (!credentials.success) {
+  if (!credentials.success && !challenge) {
     return { ok: false, code: "invalid_credentials" }
   }
 
@@ -64,14 +69,17 @@ export async function authenticateAdmin(
   let response: Response
 
   try {
-    response = await fetch(createAuthApiUrl(config, "auth/login"), {
+    response = await fetch(createAuthApiUrl(config, challenge ? "auth/2fa/verify" : "auth/login"), {
       method: "POST",
       headers: {
         Accept: "application/json",
+        ...(process.env.BFF_SHARED_SECRET ? { "X-SupplyEd-BFF": process.env.BFF_SHARED_SECRET } : {}),
+        ...(challenge ? { Authorization: `Bearer ${challenge}` } : {}),
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(credentials.data),
+      body: JSON.stringify(challenge && code.success ? { code: code.data.code } : credentials.data),
       cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
     })
   } catch {
     return { ok: false, code: "service_unavailable" }
@@ -95,7 +103,10 @@ export async function authenticateAdmin(
 
   const data = result.data.data
 
-  if (data.twoFactorRequired || data.twoFactorToken) {
+  if (data.twoFactorRequired && data.twoFactorToken) {
+    cookieStore.set("supplyed_admin_2fa", data.twoFactorToken, {
+      httpOnly: true, secure: USE_SECURE_AUTH_COOKIES, sameSite: "strict", path: "/api/auth", maxAge: 300,
+    })
     return { ok: false, code: "two_factor_required" }
   }
 
@@ -117,6 +128,7 @@ export async function authenticateAdmin(
     return { ok: false, code: "not_admin" }
   }
 
+  cookieStore.delete({ name: "supplyed_admin_2fa", path: "/api/auth" })
   return {
     ok: true,
     accessToken: data.accessToken,

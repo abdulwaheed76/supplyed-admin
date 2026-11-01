@@ -3,6 +3,8 @@ import { ArrowLeftIcon } from "lucide-react"
 
 import { CreateJobForm } from "@/components/jobs/create-job-form"
 import { Button } from "@/components/ui/button"
+import { getDropdown } from "@/lib/dropdowns/get-dropdown"
+import { activeJobOptions, JOB_DROPDOWNS, type JobFormOptions } from "@/lib/jobs/form-options"
 import {
   Card,
   CardContent,
@@ -11,7 +13,12 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-export default function CreateJobPage() {
+export default async function CreateJobPage() {
+  const dropdowns = await Promise.all(JOB_DROPDOWNS.map(getDropdown))
+  const failure = dropdowns.find((result) => !result.ok)
+  const options = Object.fromEntries(dropdowns.map((result, index) => [
+    JOB_DROPDOWNS[index], result.ok ? activeJobOptions(result.dropdown) : [],
+  ])) as JobFormOptions
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-6 p-4 md:p-6">
       <div>
@@ -38,7 +45,9 @@ export default function CreateJobPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <CreateJobForm />
+          {failure && !failure.ok ? (
+            <p role="alert" className="text-sm text-destructive">Unable to load job options. {failure.message}</p>
+          ) : <CreateJobForm options={options} />}
         </CardContent>
       </Card>
     </div>

@@ -35,6 +35,11 @@ import { useLogout } from "@/hooks/use-logout"
 
 const navigation = [
   {
+    title: "Dropdown library",
+    url: "/dashboard/dropdowns",
+    Icon: ListChecksIcon,
+  },
+  {
     title: "Dashboard",
     url: "/dashboard",
     Icon: LayoutDashboardIcon,

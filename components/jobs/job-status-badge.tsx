@@ -5,7 +5,9 @@ import { cn } from "@/lib/utils"
 const statusClasses: Record<JobStatus, string> = {
   DRAFT: "bg-muted text-muted-foreground",
   ACTIVE: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  RESERVED: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
   EXPIRED: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  FILLED: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
   CLOSED: "bg-destructive/10 text-destructive",
   SUSPENDED: "bg-orange-500/10 text-orange-700 dark:text-orange-400",
 }

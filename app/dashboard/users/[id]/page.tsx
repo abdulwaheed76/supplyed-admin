@@ -13,7 +13,6 @@ import {
 import { DeleteUserButton } from "@/components/users/delete-user-button"
 import { InstitutionProfileCard } from "@/components/users/institution-profile-card"
 import { InstructorProfileCard } from "@/components/users/instructor-profile-card"
-import { RecruiterProfileCard } from "@/components/users/recruiter-profile-card"
 import { UserAccountEditDialog } from "@/components/users/user-account-edit-dialog"
 import { UserDocumentsGrid } from "@/components/users/user-documents-grid"
 import { VerifiedBadge } from "@/components/users/verified-badge"
@@ -135,7 +134,7 @@ function UserDetailTabs({
   )
 }
 
-function RoleProfileView({ result, user }: { result: RoleProfileResult | null; user: UserListItem }) {
+function RoleProfileView({ result }: { result: RoleProfileResult | null }) {
   if (!result || (result.ok && result.kind === "none")) {
     return null
   }
@@ -155,9 +154,7 @@ function RoleProfileView({ result, user }: { result: RoleProfileResult | null; u
     const profileTitle =
       result.kind === "instructor"
         ? "Instructor profile"
-        : result.kind === "institution"
-          ? "Institution profile"
-          : "Recruiter profile"
+        : "Institution profile"
 
     return (
       <Card>
@@ -173,10 +170,8 @@ function RoleProfileView({ result, user }: { result: RoleProfileResult | null; u
 
   return result.kind === "instructor" ? (
     <InstructorProfileCard profile={result.profile} />
-  ) : result.kind === "institution" ? (
-    <InstitutionProfileCard profile={result.profile} />
   ) : (
-    <RecruiterProfileCard profile={result.profile} fallbackName={getUserDisplayName(user)} />
+    <InstitutionProfileCard profile={result.profile} />
   )
 }
 
@@ -196,7 +191,7 @@ function ProfileTab({
 
   return (
     <>
-      <RoleProfileView result={roleProfile} user={user} />
+      <RoleProfileView result={roleProfile} />
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         <Card>

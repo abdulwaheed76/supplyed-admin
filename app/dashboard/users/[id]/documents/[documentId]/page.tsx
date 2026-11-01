@@ -143,7 +143,7 @@ export default async function DocumentViewerPage({
     : false
   const reviewsResult = await getDocumentReviews(document.id)
   const reviewComment = reviewsResult.ok
-    ? getLatestDocumentReviewComment(reviewsResult.reviews)
+    ? getLatestDocumentReviewComment(reviewsResult.reviews, document)
     : null
 
   return (

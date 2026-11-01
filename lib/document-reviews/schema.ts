@@ -4,7 +4,8 @@ import { documentVerificationStatusSchema } from "@/lib/documents/schema"
 
 export const documentReviewSchema = z.object({
   id: z.string(),
-  fileVersionId: z.string(),
+  documentId: z.string(),
+  reviewedFileKey: z.string(),
   reviewerId: z.string(),
   fromStatus: documentVerificationStatusSchema,
   toStatus: documentVerificationStatusSchema,

@@ -10,8 +10,6 @@ import { z } from "zod"
 export const DOCUMENT_CONTEXTS = [
   "INSTRUCTOR_PROFILE",
   "INSTITUTION_PROFILE",
-  "RECRUITER_PROFILE",
-  "APPLICATION",
 ] as const
 
 export const DOCUMENT_TYPE_CONTEXTS = [
@@ -46,7 +44,7 @@ export type DocumentRequirement = z.infer<typeof documentRequirementSchema>
  * rather than failing validation.
  */
 export const createDocumentRequirementInputSchema = z.object({
-  documentTypeId: z.string().min(1),
+  documentTypeId: z.uuid(),
   context: documentTypeContextSchema,
   isRequired: z.boolean().optional(),
   requiresReview: z.boolean().optional(),

@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table"
 import { DeleteUserButton } from "@/components/users/delete-user-button"
 import { CreateUserDialog } from "@/components/users/create-user-dialog"
+import { userRoleSchema } from "@/lib/users/roles"
 import { UserFiltersForm } from "@/components/users/user-filters"
 import { VerifiedBadge } from "@/components/users/verified-badge"
 import { getCurrentSession } from "@/lib/auth/session"
@@ -54,7 +55,7 @@ function getPageNumber(value: string | string[] | undefined) {
 }
 
 function ProfileStatus({ user }: { user: UserListItem }) {
-  if (!user.profileStatus && !["INSTRUCTOR", "INSTITUTION", "RECRUITER"].includes(user.role)) {
+  if (!user.profileStatus && !["INSTRUCTOR", "INSTITUTION"].includes(user.role)) {
     return <span className="text-muted-foreground">-</span>
   }
 
@@ -98,6 +99,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
   const filters: UserFilters = {}
   for (const name of filterNames) {
     const value = Array.isArray(params[name]) ? params[name][0] : params[name]
+    if (name === "role" && !userRoleSchema.safeParse(value?.trim()).success) continue
     if (value?.trim()) filters[name] = value.trim()
   }
   const pageHref = (number: number) => {

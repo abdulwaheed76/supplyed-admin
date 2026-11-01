@@ -19,14 +19,7 @@ import { Label } from "@/components/ui/label"
 import { useDisableUserTwoFactor, useUpdateUser } from "@/hooks/use-users"
 import { formatUserRole } from "@/lib/users/presentation"
 import type { UserListItem } from "@/lib/users/schema"
-
-const USER_ROLES = [
-  "USER",
-  "INSTRUCTOR",
-  "INSTITUTION",
-  "RECRUITER",
-  "ADMIN",
-] as const
+import { USER_ROLES, userRoleSchema } from "@/lib/users/roles"
 
 type UserAccountEditDialogProps = {
   user: UserListItem
@@ -75,7 +68,7 @@ export function UserAccountEditDialog({ user, currentUserId }: UserAccountEditDi
         input: {
           name,
           phone,
-          role,
+          role: role === user.role ? undefined : userRoleSchema.parse(role),
           emailVerified: emailVerified === user.emailVerified ? undefined : emailVerified,
           phoneVerified: phoneVerified === (user.phoneVerified ?? false) ? undefined : phoneVerified,
         },
@@ -133,6 +126,9 @@ export function UserAccountEditDialog({ user, currentUserId }: UserAccountEditDi
                 disabled={isPending}
                 className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-shadow focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
               >
+                {!userRoleSchema.safeParse(user.role).success ? (
+                  <option value={user.role} disabled>{formatUserRole(user.role)} (existing account)</option>
+                ) : null}
                 {USER_ROLES.map((option) => (
                   <option key={option} value={option}>
                     {formatUserRole(option)}
