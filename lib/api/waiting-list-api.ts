@@ -19,3 +19,13 @@ export async function updateSubmissionStatus(
     }
   )
 }
+
+export async function deleteSubmission(id: string): Promise<void> {
+  await routeRequest(
+    `/api/contact/founding-interest/${encodeURIComponent(id.slice(0, 128))}`,
+    {
+      method: "DELETE",
+      fallbackMessage: "Unable to delete the submission.",
+    }
+  )
+}

@@ -5,6 +5,7 @@ import { ChevronLeftIcon, ChevronRightIcon, ListChecksIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DeleteSubmissionButton } from "@/components/waiting-list/delete-submission-button"
 import { ExportWaitingListButton } from "@/components/waiting-list/export-waiting-list-button"
 import { RefreshWaitingListButton } from "@/components/waiting-list/refresh-waiting-list-button"
 import { SubmissionDetailsDialog } from "@/components/waiting-list/submission-details-dialog"
@@ -29,7 +30,7 @@ export default async function WaitingListPage({ searchParams }: WaitingListPageP
       filters.toDate
   )
 
-  // A status change can remove the last matching row from the current page.
+  // A status change or deletion can remove the last matching row from the current page.
   if (result.ok && filters.page > Math.max(result.pagination.totalPages, 1)) {
     redirect(waitingListHref({ ...filters, page: Math.max(result.pagination.totalPages, 1) }))
   }
@@ -116,7 +117,10 @@ export default async function WaitingListPage({ searchParams }: WaitingListPageP
                     <TableCell><SubmissionStatusBadge status={submission.status} /></TableCell>
                     <TableCell className="text-muted-foreground">{formatSubmissionDate(submission.createdAt)}</TableCell>
                     <TableCell className="pr-4 text-right md:pr-6">
-                      <SubmissionDetailsDialog submission={submission} />
+                      <div className="flex items-center justify-end gap-1">
+                        <SubmissionDetailsDialog submission={submission} />
+                        <DeleteSubmissionButton submission={submission} />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
