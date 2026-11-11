@@ -19,6 +19,8 @@ export const config = {
     "/api/document-requirements/:path*",
     "/api/document-types/:path*",
     "/api/documents/:path*",
+    "/api/dbs-checks/:path*",
+    "/api/identity-checks/:path*",
     "/api/institutions/:path*",
     "/api/instructors/:path*",
     "/api/jobs/:path*",

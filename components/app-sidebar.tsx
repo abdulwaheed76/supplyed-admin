@@ -29,6 +29,7 @@ import {
   ListChecksIcon,
   LogOutIcon,
   ReceiptTextIcon,
+  ScanFaceIcon,
   UsersIcon,
 } from "lucide-react"
 import { useLogout } from "@/hooks/use-logout"
@@ -48,6 +49,11 @@ const navigation = [
     title: "Document types",
     url: "/dashboard/document-types",
     Icon: FileTypeIcon,
+  },
+  {
+    title: "Identity checks",
+    url: "/dashboard/identity-checks",
+    Icon: ScanFaceIcon,
   },
   {
     title: "Jobs",
