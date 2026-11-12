@@ -35,6 +35,14 @@ function getPageLabel(pathname: string) {
     return "User details"
   }
 
+  if (pathname === "/dashboard/identity-checks") {
+    return "Identity checks"
+  }
+
+  if (pathname.startsWith("/dashboard/identity-checks/")) {
+    return "Identity check"
+  }
+
   if (pathname === "/dashboard/document-queue") {
     return "Document queue"
   }
