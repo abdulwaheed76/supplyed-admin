@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 
 import {
   decideIdentityCheck,
+  markTeacherVerifiedForTesting,
   reissueIdentityCheck,
   retryIdentityCheckRetrieval,
 } from "@/lib/api/identity-check-api"
@@ -31,6 +32,18 @@ export function useDecideIdentityCheck() {
 
   return useMutation({
     mutationFn: decideIdentityCheck,
+    onSuccess: () => {
+      router.refresh()
+    },
+  })
+}
+
+/** Refreshing shows the teacher's profile as active and DBS verified. */
+export function useMarkTeacherVerifiedForTesting() {
+  const router = useRouter()
+
+  return useMutation({
+    mutationFn: markTeacherVerifiedForTesting,
     onSuccess: () => {
       router.refresh()
     },

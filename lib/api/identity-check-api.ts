@@ -40,6 +40,19 @@ export async function decideIdentityCheck({
   return result.check
 }
 
+/** Testing only: passes the teacher through TrustID and DBS without either check. */
+export async function markTeacherVerifiedForTesting(userId: string): Promise<IdentityCheck> {
+  const result = await routeRequest(
+    `/api/users/${encodeURIComponent(userId.slice(0, 128))}/test-verification`,
+    {
+      schema: identityCheckResponseSchema,
+      fallbackMessage: "Unable to mark the teacher verified.",
+    }
+  )
+
+  return result.check
+}
+
 export async function retryIdentityCheckRetrieval(id: string): Promise<IdentityCheck> {
   const result = await routeRequest(checkPath(id, "retry-retrieval"), {
     schema: identityCheckResponseSchema,
