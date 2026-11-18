@@ -11,14 +11,18 @@ export function degreeErrorResponse(message: string, status: number) {
 }
 
 /**
- * The decision and cancel route handlers share this: same-origin check,
+ * The decision, cancel and test-verify route handlers share this: same-origin check,
  * forward the POST, refresh the degree-check and teacher pages, and return the
  * updated check. A body is passed only once the route handler has validated it.
  */
 export async function forwardDegreeCheckAction(
   request: NextRequest,
   rawId: string,
-  { action, body, fallbackMessage }: { action: "decision" | "cancel"; body: unknown; fallbackMessage: string }
+  {
+    action,
+    body,
+    fallbackMessage,
+  }: { action: "decision" | "cancel" | "test-verify"; body: unknown; fallbackMessage: string }
 ) {
   const origin = request.headers.get("origin")
 

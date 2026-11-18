@@ -27,6 +27,17 @@ export async function decideDegreeCheck({
   return result.check
 }
 
+/** Testing only: the degree counts as verified by the university, without Hedd. */
+export async function markDegreeVerifiedForTesting(id: string): Promise<DegreeCheck> {
+  const result = await routeRequest(checkPath(id, "test-verify"), {
+    body: {},
+    schema: degreeCheckResponseSchema,
+    fallbackMessage: "Unable to mark the degree verified.",
+  })
+
+  return result.check
+}
+
 export async function cancelDegreeCheck({ id, note }: { id: string; note?: string }): Promise<DegreeCheck> {
   const result = await routeRequest(checkPath(id, "cancel"), {
     body: note?.trim() ? { note: note.trim() } : {},

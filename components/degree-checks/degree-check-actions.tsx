@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { BanIcon, CheckIcon, LoaderCircleIcon, XIcon } from "lucide-react"
+import { BadgeCheckIcon, BanIcon, CheckIcon, LoaderCircleIcon, XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useCancelDegreeCheck, useDecideDegreeCheck } from "@/hooks/use-degree-checks"
+import { useCancelDegreeCheck, useDecideDegreeCheck, useMarkDegreeVerifiedForTesting } from "@/hooks/use-degree-checks"
 import type { DegreeCheckDecision } from "@/lib/degree-checks/schema"
 
 const decisionCopy: Record<
@@ -94,6 +94,60 @@ export function DecideDegreeCheckButton({ checkId, decision }: { checkId: string
           >
             {decide.isPending ? <LoaderCircleIcon aria-hidden="true" className="animate-spin" /> : null}
             {decide.isPending ? copy.pending : copy.trigger}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/**
+ * Testing only. The backend refuses it outside dev (TEST_VERIFICATION_ENABLED),
+ * so in production this shows its error instead of skipping the university.
+ */
+export function TestVerifyDegreeCheckButton({ checkId }: { checkId: string }) {
+  const [open, setOpen] = React.useState(false)
+  const markVerified = useMarkDegreeVerifiedForTesting()
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      markVerified.reset()
+    }
+
+    setOpen(nextOpen)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          <BadgeCheckIcon data-icon="inline-start" />
+          Mark verified (testing)
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Mark this degree verified?</DialogTitle>
+          <DialogDescription>
+            For testing only. The degree counts as verified by the university without corrections, as if Hedd had
+            answered, and schools see it on the teacher&apos;s profile. This only works on the dev environment.
+          </DialogDescription>
+        </DialogHeader>
+        {markVerified.error ? (
+          <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {markVerified.error.message}
+          </p>
+        ) : null}
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline" disabled={markVerified.isPending}>Cancel</Button>
+          </DialogClose>
+          <Button
+            disabled={markVerified.isPending}
+            onClick={() => markVerified.mutate(checkId, { onSuccess: () => setOpen(false) })}
+          >
+            {markVerified.isPending ? <LoaderCircleIcon aria-hidden="true" className="animate-spin" /> : null}
+            {markVerified.isPending ? "Marking..." : "Mark verified"}
           </Button>
         </DialogFooter>
       </DialogContent>

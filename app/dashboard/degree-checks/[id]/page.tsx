@@ -2,7 +2,11 @@ import type { ReactNode } from "react"
 import Link from "next/link"
 import { ArrowLeftIcon, DownloadIcon } from "lucide-react"
 
-import { CancelDegreeCheckButton, DecideDegreeCheckButton } from "@/components/degree-checks/degree-check-actions"
+import {
+  CancelDegreeCheckButton,
+  DecideDegreeCheckButton,
+  TestVerifyDegreeCheckButton,
+} from "@/components/degree-checks/degree-check-actions"
 import { DegreeCheckStatusBadge, NeedsActionBadge } from "@/components/degree-checks/degree-check-badges"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -170,9 +174,10 @@ export default async function DegreeCheckPage({ params }: DegreeCheckPageProps) 
               <DecideDegreeCheckButton checkId={check.id} decision="REJECTED" />
             </div>
           ) : null}
-          {check.status === "UNCONFIRMED" ? (
-            <div>
-              <CancelDegreeCheckButton checkId={check.id} />
+          {check.status === "UNCONFIRMED" || check.status === "WAITING" || check.status === "MORE_INFORMATION" ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <TestVerifyDegreeCheckButton checkId={check.id} />
+              {check.status === "UNCONFIRMED" ? <CancelDegreeCheckButton checkId={check.id} /> : null}
             </div>
           ) : null}
         </CardContent>

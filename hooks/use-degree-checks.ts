@@ -3,7 +3,19 @@
 import { useMutation } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 
-import { cancelDegreeCheck, decideDegreeCheck } from "@/lib/api/degree-check-api"
+import { cancelDegreeCheck, decideDegreeCheck, markDegreeVerifiedForTesting } from "@/lib/api/degree-check-api"
+
+/** Refreshing shows the degree as verified and approved. */
+export function useMarkDegreeVerifiedForTesting() {
+  const router = useRouter()
+
+  return useMutation({
+    mutationFn: markDegreeVerifiedForTesting,
+    onSuccess: () => {
+      router.refresh()
+    },
+  })
+}
 
 /** Refreshing shows the decision in place of the approve and reject buttons. */
 export function useDecideDegreeCheck() {
