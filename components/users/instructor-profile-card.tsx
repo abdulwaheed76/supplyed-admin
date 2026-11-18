@@ -1,3 +1,6 @@
+import { Suspense } from "react"
+
+import { DegreeCheckSummary } from "@/components/degree-checks/degree-check-summary"
 import {
   Card,
   CardAction,
@@ -129,6 +132,16 @@ export function InstructorProfileCard({ profile }: InstructorProfileCardProps) {
             </dt>
             <dd className="mt-1 font-medium">
               {profile.dbsVerified ? "Verified" : "Not verified"}
+            </dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-xs font-medium text-muted-foreground">
+              Degree (optional, Hedd)
+            </dt>
+            <dd className="mt-1 font-medium">
+              <Suspense fallback={<span className="text-sm text-muted-foreground">Loading…</span>}>
+                <DegreeCheckSummary userId={profile.userId} />
+              </Suspense>
             </dd>
           </div>
           <div className="sm:col-span-2">

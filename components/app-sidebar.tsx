@@ -24,6 +24,7 @@ import {
   BriefcaseBusinessIcon,
   ChevronRightIcon,
   FileTypeIcon,
+  GraduationCapIcon,
   LayoutGridIcon,
   LayoutDashboardIcon,
   ListChecksIcon,
@@ -59,6 +60,11 @@ const navigation = [
     title: "Identity checks",
     url: "/dashboard/identity-checks",
     Icon: ScanFaceIcon,
+  },
+  {
+    title: "Degree checks",
+    url: "/dashboard/degree-checks",
+    Icon: GraduationCapIcon,
   },
   {
     title: "Jobs",
