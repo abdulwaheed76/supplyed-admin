@@ -1,6 +1,6 @@
 import type { WaitingListSubmission } from "@/lib/waiting-list/schema"
 
-const columns: Array<{
+export const waitingListColumns: Array<{
   heading: string
   value: (submission: WaitingListSubmission) => string | null | undefined
 }> = [
@@ -84,9 +84,9 @@ function csvCell(value: string | null | undefined) {
 
 export function createWaitingListCsv(submissions: WaitingListSubmission[]) {
   const rows = [
-    columns.map((column) => csvCell(column.heading)).join(","),
+    waitingListColumns.map((column) => csvCell(column.heading)).join(","),
     ...submissions.map((submission) =>
-      columns.map((column) => csvCell(column.value(submission))).join(","),
+      waitingListColumns.map((column) => csvCell(column.value(submission))).join(","),
     ),
   ]
 

@@ -67,7 +67,7 @@ export const createJobInputSchema = z
       }),
     parkingInfo: optionalText(1000),
     payAmount: z.number().nonnegative().optional(),
-    payType: z.enum(["hourly", "daily", "fixed"]).optional(),
+    payType: z.enum(["daily", "fixed"]).optional(),
     expiresAt: optionalDate,
   })
   .strict()

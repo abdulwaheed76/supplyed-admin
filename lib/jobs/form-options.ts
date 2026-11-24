@@ -5,6 +5,8 @@ export type JobFormOptions = Record<(typeof JOB_DROPDOWNS)[number], Array<{ valu
 
 export function activeJobOptions(dropdown: DropdownDetail) {
   return dropdown.isActive
-    ? dropdown.options.filter((option) => option.isActive).map(({ value, label }) => ({ value, label }))
+    ? dropdown.options
+        .filter((option) => option.isActive && !(dropdown.name === "payType" && option.value.trim().toLowerCase() === "hourly"))
+        .map(({ value, label }) => ({ value, label }))
     : []
 }
