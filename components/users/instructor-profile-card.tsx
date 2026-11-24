@@ -1,3 +1,6 @@
+import { Suspense } from "react"
+
+import { DegreeCheckSummary } from "@/components/degree-checks/degree-check-summary"
 import {
   Card,
   CardAction,
@@ -7,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { InstructorStatusControl } from "@/components/users/instructor-status-control"
+import { TestVerificationButton } from "@/components/users/test-verification-button"
 import type { InstructorProfile } from "@/lib/users/get-role-profile"
 
 type InstructorProfileCardProps = {
@@ -56,7 +60,10 @@ export function InstructorProfileCard({ profile }: InstructorProfileCardProps) {
         <CardDescription>
           Teaching, availability, verification, and rating information.
         </CardDescription>
-        <CardAction>
+        <CardAction className="flex flex-wrap items-center justify-end gap-2">
+          {profile.dbsVerified ? null : (
+            <TestVerificationButton userId={profile.userId} />
+          )}
           <InstructorStatusControl
             profileId={profile.id}
             userId={profile.userId}
@@ -125,6 +132,16 @@ export function InstructorProfileCard({ profile }: InstructorProfileCardProps) {
             </dt>
             <dd className="mt-1 font-medium">
               {profile.dbsVerified ? "Verified" : "Not verified"}
+            </dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-xs font-medium text-muted-foreground">
+              Degree (optional, Hedd)
+            </dt>
+            <dd className="mt-1 font-medium">
+              <Suspense fallback={<span className="text-sm text-muted-foreground">Loading…</span>}>
+                <DegreeCheckSummary userId={profile.userId} />
+              </Suspense>
             </dd>
           </div>
           <div className="sm:col-span-2">

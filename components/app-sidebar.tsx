@@ -24,11 +24,13 @@ import {
   BriefcaseBusinessIcon,
   ChevronRightIcon,
   FileTypeIcon,
+  GraduationCapIcon,
   LayoutGridIcon,
   LayoutDashboardIcon,
   ListChecksIcon,
   LogOutIcon,
   ReceiptTextIcon,
+  ScanFaceIcon,
   UsersIcon,
 } from "lucide-react"
 import { useLogout } from "@/hooks/use-logout"
@@ -53,6 +55,16 @@ const navigation = [
     title: "Document types",
     url: "/dashboard/document-types",
     Icon: FileTypeIcon,
+  },
+  {
+    title: "Identity checks",
+    url: "/dashboard/identity-checks",
+    Icon: ScanFaceIcon,
+  },
+  {
+    title: "Degree checks",
+    url: "/dashboard/degree-checks",
+    Icon: GraduationCapIcon,
   },
   {
     title: "Jobs",

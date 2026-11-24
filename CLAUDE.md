@@ -177,4 +177,4 @@ They are being migrated to the hook pattern above; follow the hook, not them.
 
 
 ## Backend Directory
-- /Users/abdulwaheed/Documents/Idnmo/supply-ed/supplyed-backend
+- /Users/abdulwaheed/Documents/Idnmo/supply-ed/supplyed-backend d
