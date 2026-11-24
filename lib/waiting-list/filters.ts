@@ -11,6 +11,8 @@ export type WaitingListFilters = {
   type?: SubmissionType
   status?: SubmissionStatus
   search?: string
+  area?: string
+  phase?: string
   fromDate?: string
   toDate?: string
 }
@@ -30,6 +32,10 @@ function dateInput(value: string | undefined) {
     : undefined
 }
 
+function textInput(value: string | undefined, maxLength: number) {
+  return value && value.length <= maxLength ? value : undefined
+}
+
 export function readWaitingListFilters(params: SearchParams): WaitingListFilters {
   const page = Number(first(params.page))
   const limit = Number(first(params.limit))
@@ -42,6 +48,8 @@ export function readWaitingListFilters(params: SearchParams): WaitingListFilters
     type: type.success ? type.data : undefined,
     status: status.success ? status.data : undefined,
     search: first(params.search) || undefined,
+    area: textInput(first(params.area), 80),
+    phase: textInput(first(params.phase), 100),
     fromDate: dateInput(first(params.fromDate)),
     toDate: dateInput(first(params.toDate)),
   }
@@ -52,6 +60,8 @@ export function waitingListHref(filters: WaitingListFilters) {
   if (filters.search) params.set("search", filters.search)
   if (filters.type) params.set("type", filters.type)
   if (filters.status) params.set("status", filters.status)
+  if (filters.area) params.set("area", filters.area)
+  if (filters.phase) params.set("phase", filters.phase)
   if (filters.fromDate) params.set("fromDate", filters.fromDate)
   if (filters.toDate) params.set("toDate", filters.toDate)
   if (filters.limit !== 20) params.set("limit", String(filters.limit))

@@ -19,6 +19,8 @@ export type GetSubmissionsOptions = {
   type?: SubmissionType
   status?: SubmissionStatus
   search?: string
+  area?: string
+  phase?: string
   fromDate?: string
   toDate?: string
 }

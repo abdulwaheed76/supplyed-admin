@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 
 import { getCurrentSession } from "@/lib/auth/session"
 import { createWaitingListCsv } from "@/lib/waiting-list/csv"
+import { createWaitingListExcel } from "@/lib/waiting-list/excel"
 import { getAllSubmissions } from "@/lib/waiting-list/get-submissions"
 
 function errorResponse(message: string, status: number) {
@@ -11,7 +12,7 @@ function errorResponse(message: string, status: number) {
   )
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getCurrentSession()
 
   if (!session) {
@@ -25,6 +26,21 @@ export async function GET() {
   }
 
   const date = new Date().toISOString().slice(0, 10)
+  const format = new URL(request.url).searchParams.get("format") ?? "csv"
+
+  if (format === "xlsx") {
+    return new Response(await createWaitingListExcel(result.submissions), {
+      headers: {
+        "Cache-Control": "private, no-store",
+        "Content-Disposition": `attachment; filename="supplyed-waiting-list-${date}.xlsx"`,
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+    })
+  }
+
+  if (format !== "csv") {
+    return errorResponse("Export format must be csv or xlsx.", 400)
+  }
 
   return new Response(createWaitingListCsv(result.submissions), {
     headers: {

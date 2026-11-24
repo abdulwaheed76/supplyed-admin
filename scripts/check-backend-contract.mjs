@@ -143,7 +143,7 @@ async function validateRequests() {
     ['job invoices', 'modules/payments/dto/list-invoices-query.dto.ts', 'JobInvoicesQueryDto', { page: '1', limit: '100', status: 'PAID' }],
     ['conversations', 'modules/conversations/dto/list-conversations-query.dto.ts', 'ListConversationsQueryDto', { page: '1', limit: '20' }],
     ['messages', 'modules/conversations/dto/list-messages-query.dto.ts', 'ListMessagesQueryDto', { limit: '30', before: uuid }],
-    ['waiting list', 'modules/contact/dto/founding-interest.dto.ts', 'ListFoundingInterestQueryDto', { page: '1', limit: '100', type: 'SCHOOL', status: 'NEW', search: 'Sample', fromDate: '2026-01-01', toDate: '2026-12-31' }],
+    ['waiting list', 'modules/contact/dto/founding-interest.dto.ts', 'ListFoundingInterestQueryDto', { page: '1', limit: '100', type: 'SCHOOL', status: 'NEW', search: 'Sample', area: 'Lancashire', phase: 'Primary', fromDate: '2026-01-01', toDate: '2026-12-31' }],
   ]
   for (const [name, file, dto, query] of queries) await check('query: ' + name, () => {
     assert.ok(backend(file)[dto], dto)

@@ -10,7 +10,8 @@ import { ExportWaitingListButton } from "@/components/waiting-list/export-waitin
 import { RefreshWaitingListButton } from "@/components/waiting-list/refresh-waiting-list-button"
 import { SubmissionDetailsDialog } from "@/components/waiting-list/submission-details-dialog"
 import { SubmissionStatusBadge } from "@/components/waiting-list/submission-status-badge"
-import { WaitingListFiltersForm } from "@/components/waiting-list/waiting-list-filters"
+import { WaitingListFiltersForm, type WaitingListFilterOption } from "@/components/waiting-list/waiting-list-filters"
+import { getDropdown } from "@/lib/dropdowns/get-dropdown"
 import { readWaitingListFilters, waitingListHref } from "@/lib/waiting-list/filters"
 import { getSubmissions } from "@/lib/waiting-list/get-submissions"
 import { formatSubmissionDate, getSubmissionTypeLabel } from "@/lib/waiting-list/presentation"
@@ -19,13 +20,48 @@ type WaitingListPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
+const historicalAreaOptions: WaitingListFilterOption[] = [
+  { value: "Both", label: "Both" },
+  { value: "Elsewhere in the United Kingdom", label: "Elsewhere in the United Kingdom" },
+  { value: "Greater Manchester", label: "Greater Manchester" },
+  { value: "Lancashire", label: "Lancashire" },
+]
+
+const teachingPhaseFallbacks: WaitingListFilterOption[] = ["EYFS", "Primary", "Secondary", "SEND / AP"].map(
+  (value) => ({ value, label: value }),
+)
+
 export default async function WaitingListPage({ searchParams }: WaitingListPageProps) {
   const filters = readWaitingListFilters(await searchParams)
-  const result = await getSubmissions(filters)
+  const [result, schoolAreas, teacherAreas, teachingPhases] = await Promise.all([
+    getSubmissions(filters),
+    getDropdown("waitlistSchoolArea"),
+    getDropdown("waitlistTeacherArea"),
+    getDropdown("waitlistPhase"),
+  ])
+  const filterOptions = (
+    fallbacks: WaitingListFilterOption[],
+    ...dropdowns: Array<typeof schoolAreas>
+  ): WaitingListFilterOption[] => {
+    const options = new Map(fallbacks.map((option) => [option.value, option.label]))
+
+    for (const dropdown of dropdowns) {
+      if (!dropdown.ok) continue
+      for (const option of dropdown.dropdown.options) {
+        if (option.isActive && !options.has(option.value)) options.set(option.value, option.label)
+      }
+    }
+
+    return Array.from(options, ([value, label]) => ({ value, label }))
+  }
+  const areaOptions = filterOptions(historicalAreaOptions, schoolAreas, teacherAreas)
+  const phaseOptions = filterOptions(teachingPhaseFallbacks, teachingPhases)
   const hasFilters = Boolean(
     filters.search ||
       filters.type ||
       filters.status ||
+      filters.area ||
+      filters.phase ||
       filters.fromDate ||
       filters.toDate
   )
@@ -52,7 +88,12 @@ export default async function WaitingListPage({ searchParams }: WaitingListPageP
         </div>
       </div>
 
-      <WaitingListFiltersForm key={JSON.stringify(filters)} filters={filters} />
+      <WaitingListFiltersForm
+        key={JSON.stringify(filters)}
+        filters={filters}
+        areaOptions={areaOptions}
+        phaseOptions={phaseOptions}
+      />
 
       {!result.ok ? (
         <Card role="alert">

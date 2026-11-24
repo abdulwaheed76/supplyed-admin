@@ -23,7 +23,15 @@ import { submissionStatusSchema, submissionTypeSchema } from "@/lib/waiting-list
 const selectClass = "h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 const pageSizes = [10, 20, 50, 100]
 
-export function WaitingListFiltersForm({ filters }: { filters: WaitingListFilters }) {
+export type WaitingListFilterOption = { label: string; value: string }
+
+type WaitingListFiltersFormProps = {
+  filters: WaitingListFilters
+  areaOptions: WaitingListFilterOption[]
+  phaseOptions: WaitingListFilterOption[]
+}
+
+export function WaitingListFiltersForm({ filters, areaOptions, phaseOptions }: WaitingListFiltersFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -34,6 +42,8 @@ export function WaitingListFiltersForm({ filters }: { filters: WaitingListFilter
       search: String(formData.get("search") ?? ""),
       type: String(formData.get("type") ?? ""),
       status: String(formData.get("status") ?? ""),
+      area: String(formData.get("area") ?? ""),
+      phase: String(formData.get("phase") ?? ""),
       limit: String(formData.get("limit") ?? "20"),
       fromDate: String(formData.get("fromDate") ?? ""),
       toDate: String(formData.get("toDate") ?? ""),
@@ -78,6 +88,30 @@ export function WaitingListFiltersForm({ filters }: { filters: WaitingListFilter
                 <option value="">All statuses</option>
                 {submissionStatusSchema.options.map((status) => (
                   <option key={status} value={status}>{getSubmissionStatusLabel(status)}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid min-w-44 flex-1 gap-1.5 sm:max-w-52">
+              <Label htmlFor="waiting-list-area">Area</Label>
+              <select id="waiting-list-area" name="area" defaultValue={filters.area ?? ""} className={selectClass}>
+                <option value="">All areas</option>
+                {filters.area && !areaOptions.some((option) => option.value === filters.area) ? (
+                  <option value={filters.area}>{filters.area}</option>
+                ) : null}
+                {areaOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid min-w-44 flex-1 gap-1.5 sm:max-w-52">
+              <Label htmlFor="waiting-list-phase">Teaching phase</Label>
+              <select id="waiting-list-phase" name="phase" defaultValue={filters.phase ?? ""} className={selectClass}>
+                <option value="">All teaching phases</option>
+                {filters.phase && !phaseOptions.some((option) => option.value === filters.phase) ? (
+                  <option value={filters.phase}>{filters.phase}</option>
+                ) : null}
+                {phaseOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
             </div>

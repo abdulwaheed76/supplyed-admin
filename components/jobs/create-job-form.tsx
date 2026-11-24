@@ -117,11 +117,7 @@ export function CreateJobForm({ options }: { options: JobFormOptions }) {
       keyStages: readKeyStages(formData),
       parkingInfo: readOptionalText(formData, "parkingInfo"),
       payAmount: payAmountValue === undefined ? undefined : Number(payAmountValue),
-      payType: readOptionalText(formData, "payType") as
-        | "hourly"
-        | "daily"
-        | "fixed"
-        | undefined,
+      payType: readOptionalText(formData, "payType") as CreateJobInput["payType"],
       expiresAt: readDate(formData, "expiresAt"),
     }
 
