@@ -2,6 +2,7 @@
   "name": "supplyed-admin",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@12.23.0",
   "scripts": {
     "dev": "next dev --webpack -p 3001",
     "build": "next build",
@@ -41,11 +42,5 @@
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
     "typescript": "^5"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "sharp",
-      "unrs-resolver"
-    ]
   }
 }
